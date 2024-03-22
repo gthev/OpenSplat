@@ -4,6 +4,7 @@
 #include <iostream>
 #include <torch/torch.h>
 #include <torch/csrc/api/include/torch/version.h>
+#include <vector>
 #include "nerfstudio.hpp"
 #include "kdtree_tensor.hpp"
 #include "spherical_harmonics.hpp"
@@ -19,11 +20,21 @@ torch::Tensor projectionMatrix(float zNear, float zFar, float fovX, float fovY, 
 torch::Tensor psnr(const torch::Tensor& rendered, const torch::Tensor& gt);
 torch::Tensor l1(const torch::Tensor& rendered, const torch::Tensor& gt);
 
+struct MeshConstraint {
+  std::vector<float> means;
+  std::vector<float> colors;
+  std::vector<float> scales;
+  std::vector<float> quats;
+};
+
 struct Model{
+
+  void loadMeshConstraint(const std::string& fileName);
+
   Model(const Points &points, int numCameras,
         int numDownscales, int resolutionSchedule, int shDegree, int shDegreeInterval, 
         int refineEvery, int warmupLength, int resetAlphaEvery, int stopSplitAt, float densifyGradThresh, float densifySizeThresh, int stopScreenSizeAt, float splitScreenSize,
-        int maxSteps,
+        int maxSteps, const std::string& meshInputFile,
         const torch::Device &device) :
     numCameras(numCameras),
     numDownscales(numDownscales), resolutionSchedule(resolutionSchedule), shDegree(shDegree), shDegreeInterval(shDegreeInterval), 
@@ -32,6 +43,8 @@ struct Model{
     device(device), ssim(11, 3){
     long long numPoints = points.xyz.size(0); 
     torch::manual_seed(42);
+
+    if(meshInputFile.size() > 0) this->loadMeshConstraint(meshInputFile);
 
     means = points.xyz.to(device).requires_grad_();
     scales = PointsTensor(points.xyz).scales().repeat({1, 3}).log().to(device).requires_grad_();
@@ -126,6 +139,9 @@ struct Model{
   int stopScreenSizeAt;
   float splitScreenSize;
   int maxSteps;
+
+  bool hasMeshContraint = false;
+  std::unique_ptr<MeshConstraint> meshConstraint = nullptr; 
 };
 
 

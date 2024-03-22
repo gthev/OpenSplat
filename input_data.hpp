@@ -58,6 +58,6 @@ struct InputData{
 
     std::tuple<std::vector<Camera>, Camera *> getCameras(bool validate, const std::string &valImage = "random");
 };
-InputData inputDataFromX(const std::string &projectRoot);
+InputData inputDataFromX(const std::string &projectRoot, bool hasMeshInput);
 
 #endif

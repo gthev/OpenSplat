@@ -5,14 +5,14 @@
 namespace fs = std::filesystem;
 using namespace torch::indexing;
 
-namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot); }
+namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasMeshInput); }
 namespace cm{ InputData inputDataFromColmap(const std::string &projectRoot); }
 
-InputData inputDataFromX(const std::string &projectRoot){
+InputData inputDataFromX(const std::string &projectRoot, bool hasMeshInput){
     fs::path root(projectRoot);
 
     if (fs::exists(root / "transforms.json")){
-        return ns::inputDataFromNerfStudio(projectRoot);
+        return ns::inputDataFromNerfStudio(projectRoot, hasMeshInput);
     }else if (fs::exists(root / "sparse") || fs::exists(root / "cameras.bin")){
         return cm::inputDataFromColmap(projectRoot);
     }else{

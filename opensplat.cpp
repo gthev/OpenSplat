@@ -17,7 +17,9 @@ int main(int argc, char *argv[]){
         ("s,save-every", "Save output scene every these many steps (set to -1 to disable)", cxxopts::value<int>()->default_value("-1"))
         ("val", "Withhold a camera shot for validating the scene loss")
         ("val-image", "Filename of the image to withhold for validating scene loss", cxxopts::value<std::string>()->default_value("random"))
-        
+
+        ("mesh-file", "Filename of a .ply file specifying the gaussians defining the structure of input", cxxopts::value<std::string>()->default_value(""))
+
         ("n,num-iters", "Number of iterations to run", cxxopts::value<int>()->default_value("30000"))
         ("d,downscale-factor", "Scale input images by this factor.", cxxopts::value<float>()->default_value("1"))
         ("num-downscales", "Number of images downscales to use. After being scaled by [downscale-factor], images are initially scaled by a further (2^[num-downscales]) and the scale is increased every [resolution-schedule]", cxxopts::value<int>()->default_value("2"))
@@ -74,6 +76,9 @@ int main(int argc, char *argv[]){
     const float densifySizeThresh = result["densify-size-thresh"].as<float>();
     const int stopScreenSizeAt = result["stop-screen-size-at"].as<int>();
     const float splitScreenSize = result["split-screen-size"].as<float>();
+    
+    const std::string meshInput = result["mesh-file"].as<std::string>();
+    const bool hasMeshInput = meshInput.size() > 0;
 
     torch::Device device = torch::kCPU;
 
@@ -85,7 +90,7 @@ int main(int argc, char *argv[]){
     }
 
     try{
-        InputData inputData = inputDataFromX(projectRoot);
+        InputData inputData = inputDataFromX(projectRoot, hasMeshInput);
         for (Camera &cam : inputData.cameras){
             cam.loadImage(downScaleFactor);
         }
@@ -102,6 +107,7 @@ int main(int argc, char *argv[]){
                         numDownscales, resolutionSchedule, shDegree, shDegreeInterval, 
                         refineEvery, warmupLength, resetAlphaEvery, stopSplitAt, densifyGradThresh, densifySizeThresh, stopScreenSizeAt, splitScreenSize,
                         numIters,
+                        meshInput,
                         device);
 
         std::vector< size_t > camIndices( cams.size() );

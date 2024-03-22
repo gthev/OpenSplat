@@ -124,15 +124,17 @@ torch::Tensor posesFromTransforms(const Transforms &t){
     return poses;
 }
 
-InputData inputDataFromNerfStudio(const std::string &projectRoot){
+InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasMeshInput){
     InputData ret;
     fs::path nsRoot(projectRoot);
     fs::path transformsPath = nsRoot / "transforms.json";
     if (!fs::exists(transformsPath)) throw std::runtime_error(transformsPath.string() + " does not exist");
 
     Transforms t = readTransforms(transformsPath.string());
-    if (t.plyFilePath.empty()) throw std::runtime_error("ply_file_path is empty");
-    PointSet *pSet = readPointSet((nsRoot / t.plyFilePath).string());
+    if (t.plyFilePath.empty() && !hasMeshInput) throw std::runtime_error("ply_file_path is empty (and no mesh input)");
+    
+    PointSet *pSet = nullptr;
+    if(!hasMeshInput) pSet = readPointSet((nsRoot / t.plyFilePath).string());
 
     torch::Tensor unorientedPoses = posesFromTransforms(t);
 
@@ -157,14 +159,16 @@ InputData inputDataFromNerfStudio(const std::string &projectRoot){
                             poses[i], (nsRoot / f.filePath).string()));
     }
 
-    torch::Tensor points = pSet->pointsTensor().clone();
+    if(!hasMeshInput) {
+        torch::Tensor points = pSet->pointsTensor().clone();
 
-    ret.points.xyz = torch::matmul(torch::cat({points, torch::ones_like(points.index({"...", Slice(None, 1)}))}, -1), 
-                    ret.transformMatrix.transpose(0, 1));
-    ret.points.xyz *= ret.scaleFactor;
-    ret.points.rgb = pSet->colorsTensor().clone();
+        ret.points.xyz = torch::matmul(torch::cat({points, torch::ones_like(points.index({"...", Slice(None, 1)}))}, -1), 
+                        ret.transformMatrix.transpose(0, 1));
+        ret.points.xyz *= ret.scaleFactor;
+        ret.points.rgb = pSet->colorsTensor().clone();
 
-    RELEASE_POINTSET(pSet);
+        RELEASE_POINTSET(pSet);
+    }
 
     return ret;
 }

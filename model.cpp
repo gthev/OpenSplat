@@ -5,6 +5,8 @@
 #include "rasterize_gaussians.hpp"
 #include "tensor_math.hpp"
 #include "vendor/gsplat/config.h"
+#include <tinyply.h>
+#include <fstream>
 #ifdef USE_HIP
 #include <c10/hip/HIPCachingAllocator.h>
 #else
@@ -46,6 +48,21 @@ torch::Tensor l1(const torch::Tensor& rendered, const torch::Tensor& gt){
     return torch::abs(gt - rendered).mean();
 }
 
+void Model::loadMeshConstraint(const std::string& fileName) {
+    std::printf("Opening mesh gaussians file %s...", fileName.c_str());
+    // Load the file into a file stream
+    std::unique_ptr<std::istream> file_stream;
+    file_stream.reset(new std::ifstream(fileName, std::ios::binary));
+    if (!file_stream || file_stream->fail()) throw std::runtime_error("file_stream failed to open " + fileName);
+    file_stream->seekg(0, std::ios::end);
+    const float size_mb = file_stream->tellg() * float(1e-6);
+    file_stream->seekg(0, std::ios::beg);
+
+    std::printf("OK\n");
+
+    tinyply::PlyFile meshply;
+    meshply.parse_header(*file_stream);
+}
 
 torch::Tensor Model::forward(Camera& cam, int step){
 
