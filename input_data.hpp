@@ -66,8 +66,8 @@ struct Points{
 };
 struct InputData{
     std::vector<Camera> cameras;
-    float scaleFactor;
-    torch::Tensor transformMatrix;
+    float scale;
+    torch::Tensor translation;
     Points points;
     std::array<float, 3> backgroundColor;
 

@@ -17,7 +17,8 @@ int main(int argc, char *argv[]){
         ("s,save-every", "Save output scene every these many steps (set to -1 to disable)", cxxopts::value<int>()->default_value("-1"))
         ("val", "Withhold a camera shot for validating the scene loss")
         ("val-image", "Filename of the image to withhold for validating scene loss", cxxopts::value<std::string>()->default_value("random"))
-
+        ("val-render", "Path of the directory where to render validation images", cxxopts::value<std::string>()->default_value(""))
+        ("cpu", "Force CPU execution")
         ("mesh-file", "Filename of a .ply file specifying the gaussians defining the structure of input", cxxopts::value<std::string>()->default_value(""))
 
         ("n,num-iters", "Number of iterations to run", cxxopts::value<int>()->default_value("30000"))
@@ -39,7 +40,7 @@ int main(int argc, char *argv[]){
         ("h,help", "Print usage")
         ;
     options.parse_positional({ "input" });
-    options.positional_help("[nerfstudio project path]");
+    options.positional_help("[colmap or nerfstudio project path]");
     cxxopts::ParseResult result;
     try {
         result = options.parse(argc, argv);
@@ -58,8 +59,10 @@ int main(int argc, char *argv[]){
     const std::string projectRoot = result["input"].as<std::string>();
     const std::string outputScene = result["output"].as<std::string>();
     const int saveEvery = result["save-every"].as<int>(); 
-    const bool validate = result.count("val") > 0;
+    const bool validate = result.count("val") > 0 || result.count("val-render") > 0;
     const std::string valImage = result["val-image"].as<std::string>();
+    const std::string valRender = result["val-render"].as<std::string>();
+    if (!valRender.empty() && !fs::exists(valRender)) fs::create_directories(valRender);
 
     const float downScaleFactor = (std::max)(result["downscale-factor"].as<float>(), 1.0f);
     const int numIters = result["num-iters"].as<int>();
@@ -81,10 +84,12 @@ int main(int argc, char *argv[]){
     const bool hasMeshInput = meshInput.size() > 0;
 
     torch::Device device = torch::kCPU;
+    int displayStep = 1;
 
-    if (torch::cuda::is_available()) {
+    if (torch::cuda::is_available() && result.count("cpu") == 0) {
         std::cout << "Using CUDA" << std::endl;
         device = torch::kCUDA;
+        displayStep = 10;
     }else{
         std::cout << "Using CPU" << std::endl;
     }
@@ -102,12 +107,12 @@ int main(int argc, char *argv[]){
         std::vector<Camera> cams = std::get<0>(t);
         Camera *valCam = std::get<1>(t);
 
-        Model model(inputData.points, 
-                        cams.size(),
-                        numDownscales, resolutionSchedule, shDegree, shDegreeInterval, 
-                        refineEvery, warmupLength, resetAlphaEvery, stopSplitAt, densifyGradThresh, densifySizeThresh, stopScreenSizeAt, splitScreenSize,
-                        numIters, inputData.backgroundColor,
-                        device);
+        Model model(inputData,
+                    cams.size(),
+                    numDownscales, resolutionSchedule, shDegree, shDegreeInterval, 
+                    refineEvery, warmupLength, resetAlphaEvery, stopSplitAt, densifyGradThresh, densifySizeThresh, stopScreenSizeAt, splitScreenSize,
+                    numIters, inputData.backgroundColor,
+                    device);
 
         std::vector< size_t > camIndices( cams.size() );
         std::iota( camIndices.begin(), camIndices.end(), 0 );
@@ -126,7 +131,7 @@ int main(int argc, char *argv[]){
             torch::Tensor mainLoss = model.mainLoss(rgb, gt, ssimWeight);
             mainLoss.backward();
             
-            if (step % 10 == 0) std::cout << "Step " << step << ": " << mainLoss.item<float>() << std::endl;
+            if (step % displayStep == 0) std::cout << "Step " << step << ": " << mainLoss.item<float>() << std::endl;
 
             model.optimizersStep();
             model.schedulersStep(step);
@@ -136,9 +141,17 @@ int main(int argc, char *argv[]){
                 fs::path p(outputScene);
                 model.savePlySplat((p.replace_filename(fs::path(p.stem().string() + "_" + std::to_string(step) + p.extension().string())).string()));
             }
+
+            if (!valRender.empty() && step % 10 == 0){
+                torch::Tensor rgb = model.forward(*valCam, step);
+                cv::Mat image = tensorToImage(rgb.detach().cpu());
+                cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+                cv::imwrite((fs::path(valRender) / (std::to_string(step) + ".png")).string(), image);
+            }
         }
 
         model.savePlySplat(outputScene);
+        // model.saveDebugPly("debug.ply");
 
         // Validate
         if (valCam != nullptr){

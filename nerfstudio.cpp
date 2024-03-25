@@ -186,12 +186,10 @@ InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::str
 
     torch::Tensor unorientedPoses = posesFromTransforms(t);
 
-    auto r = autoOrientAndCenterPoses(unorientedPoses);
+    auto r = autoScaleAndCenterPoses(unorientedPoses);
     torch::Tensor poses = std::get<0>(r);
-    ret.transformMatrix = std::get<1>(r);
-
-    ret.scaleFactor = 1.0f / torch::max(torch::abs(poses.index({Slice(), Slice(None, 3), 3}))).item<float>();
-    poses.index({Slice(), Slice(None, 3), 3}) *= ret.scaleFactor;
+    ret.translation = std::get<1>(r);
+    ret.scale = std::get<2>(r);
 
     // aabbScale = [[-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]]
 
@@ -210,10 +208,10 @@ InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::str
     if(!hasMeshInput) {
         torch::Tensor points = pSet->pointsTensor().clone();
 
-        ret.points.xyz = torch::matmul(torch::cat({points, torch::ones_like(points.index({"...", Slice(None, 1)}))}, -1), 
-                        ret.transformMatrix.transpose(0, 1));
-        ret.points.xyz *= ret.scaleFactor;
-        ret.points.rgb = pSet->colorsTensor().clone();
+    ret.points.xyz = torch::matmul(torch::cat({points, torch::ones_like(points.index({"...", Slice(None, 1)}))}, -1), 
+                    ret.transformMatrix.transpose(0, 1));
+    ret.points.xyz *= ret.scaleFactor;
+    ret.points.rgb = pSet->colorsTensor().clone();
 
         RELEASE_POINTSET(pSet);
     }
