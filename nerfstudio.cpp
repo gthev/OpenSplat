@@ -208,10 +208,8 @@ InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::str
     if(!hasMeshInput) {
         torch::Tensor points = pSet->pointsTensor().clone();
 
-    ret.points.xyz = torch::matmul(torch::cat({points, torch::ones_like(points.index({"...", Slice(None, 1)}))}, -1), 
-                    ret.transformMatrix.transpose(0, 1));
-    ret.points.xyz *= ret.scaleFactor;
-    ret.points.rgb = pSet->colorsTensor().clone();
+        ret.points.xyz = (points - ret.translation) * ret.scale;
+        ret.points.rgb = pSet->colorsTensor().clone();
 
         RELEASE_POINTSET(pSet);
     }
