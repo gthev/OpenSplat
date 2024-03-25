@@ -12,6 +12,8 @@ InputData inputDataFromColmap(const std::string &projectRoot){
     InputData ret;
     fs::path cmRoot(projectRoot);
 
+    ret.backgroundColor = {0.6130f, 0.0101f, 0.3984f};
+
     if (!fs::exists(cmRoot / "cameras.bin") && fs::exists(cmRoot / "sparse" / "0" / "cameras.bin")){
         cmRoot = cmRoot / "sparse" / "0";
     }

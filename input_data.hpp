@@ -46,18 +46,35 @@ struct Camera{
     std::unordered_map<int, torch::Tensor> imagePyramids;
 };
 
+struct MeshConstraintRaw {
+  std::vector<float> means;
+  std::vector<float> colors;
+  std::vector<float> scales;
+  std::vector<float> quats;
+};
+
+struct MeshConstraint {
+    torch::Tensor scales;
+    torch::Tensor quats;
+};
+
 struct Points{
     torch::Tensor xyz;
     torch::Tensor rgb;
+
+    std::unique_ptr<MeshConstraint> mesh = nullptr;
 };
 struct InputData{
     std::vector<Camera> cameras;
     float scaleFactor;
     torch::Tensor transformMatrix;
     Points points;
+    std::array<float, 3> backgroundColor;
 
     std::tuple<std::vector<Camera>, Camera *> getCameras(bool validate, const std::string &valImage = "random");
 };
-InputData inputDataFromX(const std::string &projectRoot, bool hasMeshInput);
+InputData inputDataFromX(const std::string &projectRoot, const std::string& meshInput);
+
+std::unique_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileName);
 
 #endif

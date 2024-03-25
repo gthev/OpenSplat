@@ -20,21 +20,12 @@ torch::Tensor projectionMatrix(float zNear, float zFar, float fovX, float fovY, 
 torch::Tensor psnr(const torch::Tensor& rendered, const torch::Tensor& gt);
 torch::Tensor l1(const torch::Tensor& rendered, const torch::Tensor& gt);
 
-struct MeshConstraint {
-  std::vector<float> means;
-  std::vector<float> colors;
-  std::vector<float> scales;
-  std::vector<float> quats;
-};
-
 struct Model{
-
-  void loadMeshConstraint(const std::string& fileName);
 
   Model(const Points &points, int numCameras,
         int numDownscales, int resolutionSchedule, int shDegree, int shDegreeInterval, 
         int refineEvery, int warmupLength, int resetAlphaEvery, int stopSplitAt, float densifyGradThresh, float densifySizeThresh, int stopScreenSizeAt, float splitScreenSize,
-        int maxSteps, const std::string& meshInputFile,
+        int maxSteps, const std::array<float, 3>& background,
         const torch::Device &device) :
     numCameras(numCameras),
     numDownscales(numDownscales), resolutionSchedule(resolutionSchedule), shDegree(shDegree), shDegreeInterval(shDegreeInterval), 
@@ -43,8 +34,6 @@ struct Model{
     device(device), ssim(11, 3){
     long long numPoints = points.xyz.size(0); 
     torch::manual_seed(42);
-
-    if(meshInputFile.size() > 0) this->loadMeshConstraint(meshInputFile);
 
     means = points.xyz.to(device).requires_grad_();
     scales = PointsTensor(points.xyz).scales().repeat({1, 3}).log().to(device).requires_grad_();
@@ -60,8 +49,7 @@ struct Model{
     featuresRest = shs.index({Slice(), Slice(1, None), Slice()}).to(device).requires_grad_();
     opacities = torch::logit(0.1f * torch::ones({numPoints, 1})).to(device).requires_grad_();
     
-    // backgroundColor = torch::tensor({0.0f, 0.0f, 0.0f}, device); // Black
-    backgroundColor = torch::tensor({0.6130f, 0.0101f, 0.3984f}, device); // Nerf Studio default
+    backgroundColor = torch::tensor({background[0], background[1], background[2]}, device);
 
     meansOpt = new torch::optim::Adam({means}, torch::optim::AdamOptions(0.00016));
     scalesOpt = new torch::optim::Adam({scales}, torch::optim::AdamOptions(0.005));
@@ -141,7 +129,6 @@ struct Model{
   int maxSteps;
 
   bool hasMeshContraint = false;
-  std::unique_ptr<MeshConstraint> meshConstraint = nullptr; 
 };
 
 

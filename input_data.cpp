@@ -1,18 +1,113 @@
 #include <filesystem>
 #include "input_data.hpp"
 #include "cv_utils.hpp"
+#include <tinyply.h>
+#include <memory>
+#include <fstream>
+#include <cstring>
 
 namespace fs = std::filesystem;
 using namespace torch::indexing;
 
-namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasMeshInput); }
+namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::string& meshInput); }
 namespace cm{ InputData inputDataFromColmap(const std::string &projectRoot); }
 
-InputData inputDataFromX(const std::string &projectRoot, bool hasMeshInput){
+std::unique_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileName) {
+
+    std::printf("Opening mesh gaussians file %s... ", fileName.c_str());
+    // Load the file into a file stream
+    std::unique_ptr<std::istream> file_stream;
+    file_stream.reset(new std::ifstream(fileName, std::ios::binary));
+    if (!file_stream || file_stream->fail()) throw std::runtime_error("file_stream failed to open " + fileName);
+    file_stream->seekg(0, std::ios::end);
+    const float size_mb = file_stream->tellg() * float(1e-6);
+    file_stream->seekg(0, std::ios::beg);
+
+    std::printf("OK\n");
+
+    std::printf("Checking required elements and properties... ");
+
+    tinyply::PlyFile meshply;
+    meshply.parse_header(*file_stream);
+
+    if(meshply.get_elements().size() != 1 || meshply.get_elements()[0].name != "vertex") {
+        printf("Incorrect elements format in mesh input file\n");
+        return nullptr;
+    }
+    // Verification of required fields in input ply file
+    {
+        const std::array<std::string, 14> requiredFields = {
+            "x", "y", "z", "f_dc_0", "f_dc_1", "f_dc_2", "opacity", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2", "rot_3"
+        };
+
+        const auto element = meshply.get_elements()[0];
+
+        for(const auto& f: requiredFields) {
+            bool found = false;
+            for(const auto& p: element.properties) {
+                if(p.name == f) {
+                    found = true;
+                    break;
+                }
+            }
+            if(!found) {
+                printf("Required field %s was not found in mesh input file\n", f.c_str());
+                return nullptr;
+            }
+        }
+    }
+
+    printf("OK\n");
+
+    unsigned int nrgauss = meshply.get_elements()[0].size;
+
+    std::unique_ptr<MeshConstraintRaw> mc = std::make_unique<MeshConstraintRaw>();
+    mc->means = std::vector<float>(nrgauss*3);
+    mc->colors = std::vector<float>(nrgauss*3);
+    mc->scales = std::vector<float>(nrgauss*3);
+    mc->quats = std::vector<float>(nrgauss*4);
+
+    // read from file here...
+    std::shared_ptr<tinyply::PlyData> means;
+    std::shared_ptr<tinyply::PlyData> colors;
+    std::shared_ptr<tinyply::PlyData> scales;
+    std::shared_ptr<tinyply::PlyData> quats;
+
+    means = meshply.request_properties_from_element("vertex", {"x", "y", "z"});
+    colors = meshply.request_properties_from_element("vertex", {"f_dc_0", "f_dc_1", "f_dc_2"});
+    scales = meshply.request_properties_from_element("vertex", {"scale_0", "scale_1", "scale_2"});
+    quats = meshply.request_properties_from_element("vertex", {"rot_0", "rot_1", "rot_2", "rot_3"});
+
+    printf("Loading mesh data... ");
+
+    // read the file
+    meshply.read(*file_stream);
+
+    // copy into our struct
+    {
+        size_t num_b = means->buffer.size_bytes();
+        memcpy(mc->means.data(), means->buffer.get(), num_b);
+        
+        num_b = colors->buffer.size_bytes();
+        memcpy(mc->colors.data(), colors->buffer.get(), num_b);
+
+        num_b = scales->buffer.size_bytes();
+        memcpy(mc->scales.data(), scales->buffer.get(), num_b);
+
+        num_b = quats->buffer.size_bytes();
+        memcpy(mc->quats.data(), quats->buffer.get(), num_b);
+    }
+
+    printf("OK\n");
+
+    return mc;
+}
+
+InputData inputDataFromX(const std::string &projectRoot, const std::string& meshInput){
     fs::path root(projectRoot);
 
     if (fs::exists(root / "transforms.json")){
-        return ns::inputDataFromNerfStudio(projectRoot, hasMeshInput);
+        return ns::inputDataFromNerfStudio(projectRoot, meshInput);
     }else if (fs::exists(root / "sparse") || fs::exists(root / "cameras.bin")){
         return cm::inputDataFromColmap(projectRoot);
     }else{

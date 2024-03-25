@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <optional>
 #include <torch/torch.h>
 #include "input_data.hpp"
 #include "vendor/json/json_fwd.hpp"
@@ -31,10 +32,14 @@ namespace ns{
     void to_json(json &j, const Frame &f);
     void from_json(const json& j, Frame &f);
 
+    void to_json(json& j, const std::array<float, 3>& backgroundColor);
+    void from_json(const json& j, std::array<float, 3>& backgroundColor);
+
     struct Transforms{
         std::string cameraModel;
         std::vector<Frame> frames;
         std::string plyFilePath;
+        std::array<float, 3> backgroundColor;
     };
     void to_json(json &j, const Transforms &t);
     void from_json(const json& j, Transforms &t);
@@ -42,7 +47,7 @@ namespace ns{
     Transforms readTransforms(const std::string &filename);
     torch::Tensor posesFromTransforms(const Transforms &t);
 
-    InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasMeshInput);
+    InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::string& meshInput);
 }   
 
 

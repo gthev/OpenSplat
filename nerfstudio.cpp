@@ -48,10 +48,25 @@ void from_json(const json& j, Frame &f){
     
 }
 
+void to_json(json& j, const std::array<float, 3>& backgroundColor) {
+    j = json({
+        {"r", backgroundColor[0]},
+        {"g", backgroundColor[1]},
+        {"b", backgroundColor[2]},
+    });
+}
+
+void from_json(const json& j, std::array<float, 3>& backgroundColor) {
+    j.at("r").get_to(backgroundColor[0]);
+    j.at("g").get_to(backgroundColor[1]);
+    j.at("b").get_to(backgroundColor[2]);
+}
+
 void to_json(json &j, const Transforms &t){
     j = json{ {"camera_model", t.cameraModel }, 
                 {"frames", t.frames },
                 {"ply_file_path", t.plyFilePath },
+                {"background_color", t.backgroundColor},
             };
 }
 
@@ -59,6 +74,12 @@ void from_json(const json& j, Transforms &t){
     j.at("camera_model").get_to(t.cameraModel);
     j.at("frames").get_to(t.frames);
     if (j.contains("ply_file_path")) j.at("ply_file_path").get_to(t.plyFilePath);
+
+    if (j.contains("background_color")) {
+        j.at("background_color").get_to(t.backgroundColor);
+    } else {
+        t.backgroundColor = {0.6130f, 0.0101f, 0.3984f};
+    }
 
     // Globals
     int width = 0;
@@ -124,17 +145,44 @@ torch::Tensor posesFromTransforms(const Transforms &t){
     return poses;
 }
 
-InputData inputDataFromNerfStudio(const std::string &projectRoot, bool hasMeshInput){
+struct PointSetConstrRes {
+    PointSet *ps;
+    std::unique_ptr<MeshConstraint> mc;
+};
+
+PointSetConstrRes pointSetFromMeshConstraint(std::unique_ptr<MeshConstraintRaw> mcr) {
+    PointSet *r = new PointSet();
+    std::unique_ptr<MeshConstraint> mc = std::make_unique<MeshConstraint>();
+    unsigned int nrgauss = mcr->means.size() / 3;
+    r->points.resize(nrgauss);
+    r->colors.resize(nrgauss);
+    
+    memcpy(r->points.data(), mcr->means.data(), 3 * nrgauss * sizeof(float));
+    mc->scales = torch::from_blob(mcr->scales.data(), {static_cast<long int>(nrgauss), 3}, torch::kFloat32);
+    mc->quats = torch::from_blob(mcr->quats.data(), {static_cast<long int>(nrgauss), 4}, torch::kFloat32);
+
+    return {r, std::move(mc)};
+}
+
+InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::string& meshInput){
     InputData ret;
     fs::path nsRoot(projectRoot);
     fs::path transformsPath = nsRoot / "transforms.json";
     if (!fs::exists(transformsPath)) throw std::runtime_error(transformsPath.string() + " does not exist");
 
+    bool hasMeshInput = meshInput.size() > 0;
+
     Transforms t = readTransforms(transformsPath.string());
     if (t.plyFilePath.empty() && !hasMeshInput) throw std::runtime_error("ply_file_path is empty (and no mesh input)");
     
+    ret.backgroundColor = t.backgroundColor;
+
     PointSet *pSet = nullptr;
     if(!hasMeshInput) pSet = readPointSet((nsRoot / t.plyFilePath).string());
+    else {
+        std::unique_ptr<MeshConstraintRaw> mc = loadMeshConstraint(meshInput);
+        auto res = pointSetFromMeshConstraint(std::move(mc));
+    }
 
     torch::Tensor unorientedPoses = posesFromTransforms(t);
 

@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
     }
 
     try{
-        InputData inputData = inputDataFromX(projectRoot, hasMeshInput);
+        InputData inputData = inputDataFromX(projectRoot, meshInput);
         for (Camera &cam : inputData.cameras){
             cam.loadImage(downScaleFactor);
         }
@@ -106,8 +106,7 @@ int main(int argc, char *argv[]){
                         cams.size(),
                         numDownscales, resolutionSchedule, shDegree, shDegreeInterval, 
                         refineEvery, warmupLength, resetAlphaEvery, stopSplitAt, densifyGradThresh, densifySizeThresh, stopScreenSizeAt, splitScreenSize,
-                        numIters,
-                        meshInput,
+                        numIters, inputData.backgroundColor,
                         device);
 
         std::vector< size_t > camIndices( cams.size() );
