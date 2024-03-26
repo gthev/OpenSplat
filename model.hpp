@@ -36,11 +36,25 @@ struct Model{
     scale = inputData.scale;
     translation = inputData.translation;
 
+    this->hasMeshContraint = inputData.points.mesh != nullptr;
+
     torch::manual_seed(42);
 
     means = inputData.points.xyz.to(device).requires_grad_();
-    scales = PointsTensor(inputData.points.xyz).scales().repeat({1, 3}).log().to(device).requires_grad_();
-    quats = randomQuatTensor(numPoints).to(device).requires_grad_();
+
+    if(hasMeshContraint) {
+      scales = inputData.points.mesh->scales.to(device).requires_grad_();
+      quats = inputData.points.mesh->quats.to(device).requires_grad_();
+    } else {
+      scales = PointsTensor(inputData.points.xyz).scales().repeat({1, 3}).log().to(device).requires_grad_();
+      quats = randomQuatTensor(numPoints).to(device).requires_grad_();
+    }
+
+    std::cout << means.index({Slice(None, 20), Slice()}) << std::endl;
+    std::cout << scales.index({Slice(None, 20), Slice()}) << std::endl;
+    std::cout << quats.index({Slice(None, 20), Slice()}) << std::endl;
+
+    throw std::runtime_error("NYI");
 
     int dimSh = numShBases(shDegree);
     torch::Tensor shs = torch::zeros({numPoints, dimSh, 3}, torch::TensorOptions().dtype(torch::kFloat32).device(device));

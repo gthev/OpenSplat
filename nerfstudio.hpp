@@ -32,9 +32,6 @@ namespace ns{
     void to_json(json &j, const Frame &f);
     void from_json(const json& j, Frame &f);
 
-    void to_json(json& j, const std::array<float, 3>& backgroundColor);
-    void from_json(const json& j, std::array<float, 3>& backgroundColor);
-
     struct Transforms{
         std::string cameraModel;
         std::vector<Frame> frames;
