@@ -54,6 +54,8 @@ struct MeshConstraintRaw {
 };
 
 struct MeshConstraint {
+    std::shared_ptr<MeshConstraintRaw> _impl;
+
     torch::Tensor scales;
     torch::Tensor quats;
 };
@@ -62,7 +64,7 @@ struct Points{
     torch::Tensor xyz;
     torch::Tensor rgb;
 
-    std::unique_ptr<MeshConstraint> mesh = nullptr;
+    std::shared_ptr<MeshConstraint> mesh = nullptr;
 };
 struct InputData{
     std::vector<Camera> cameras;
@@ -75,6 +77,6 @@ struct InputData{
 };
 InputData inputDataFromX(const std::string &projectRoot, const std::string& meshInput);
 
-std::unique_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileName);
+std::shared_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileName);
 
 #endif

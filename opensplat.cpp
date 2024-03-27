@@ -120,6 +120,7 @@ int main(int argc, char *argv[]){
 
         int imageSize = -1;
         for (size_t step = 1; step <= numIters; step++){
+
             Camera& cam = cams[ camsIter.next() ];
 
             model.optimizersZeroGrad();
@@ -127,6 +128,11 @@ int main(int argc, char *argv[]){
             torch::Tensor rgb = model.forward(cam, step);
             torch::Tensor gt = cam.getImage(model.getDownscaleFactor(step));
             gt = gt.to(device);
+
+            if (saveEvery > 0 && step % saveEvery == 0){
+                fs::path p(outputScene);
+                model.savePlySplat((p.replace_filename(fs::path(p.stem().string() + "_" + std::to_string(step) + p.extension().string())).string()));
+            }
 
             torch::Tensor mainLoss = model.mainLoss(rgb, gt, ssimWeight);
             mainLoss.backward();
@@ -137,10 +143,7 @@ int main(int argc, char *argv[]){
             model.schedulersStep(step);
             model.afterTrain(step);
 
-            if (saveEvery > 0 && step % saveEvery == 0){
-                fs::path p(outputScene);
-                model.savePlySplat((p.replace_filename(fs::path(p.stem().string() + "_" + std::to_string(step) + p.extension().string())).string()));
-            }
+            
 
             if (!valRender.empty() && step % 10 == 0){
                 torch::Tensor rgb = model.forward(*valCam, step);

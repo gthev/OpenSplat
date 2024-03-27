@@ -500,7 +500,7 @@ void Model::savePlySplat(const std::string &filename){
     torch::Tensor meansCpu = (means.cpu() / scale) + translation;
     torch::Tensor featuresDcCpu = featuresDc.cpu();
     torch::Tensor opacitiesCpu = opacities.cpu();
-    torch::Tensor scalesCpu = torch::log((torch::exp(scales.cpu()) / scale));
+    torch::Tensor scalesCpu = scales.cpu() - std::log(scale);
     torch::Tensor quatsCpu = quats.cpu();
 
     for (size_t i = 0; i < numPoints; i++) {

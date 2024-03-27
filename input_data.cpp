@@ -12,7 +12,7 @@ using namespace torch::indexing;
 namespace ns{ InputData inputDataFromNerfStudio(const std::string &projectRoot, const std::string& meshInput); }
 namespace cm{ InputData inputDataFromColmap(const std::string &projectRoot); }
 
-std::unique_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileName) {
+std::shared_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileName) {
 
     std::printf("Opening mesh gaussians file %s... ", fileName.c_str());
     // Load the file into a file stream
@@ -61,7 +61,7 @@ std::unique_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileNam
 
     unsigned int nrgauss = meshply.get_elements()[0].size;
 
-    std::unique_ptr<MeshConstraintRaw> mc = std::make_unique<MeshConstraintRaw>();
+    std::shared_ptr<MeshConstraintRaw> mc = std::make_shared<MeshConstraintRaw>();
     mc->means = std::vector<float>(nrgauss*3);
     mc->colors = std::vector<float>(nrgauss*3);
     mc->scales = std::vector<float>(nrgauss*3);
