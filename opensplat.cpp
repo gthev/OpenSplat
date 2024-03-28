@@ -123,6 +123,19 @@ int main(int argc, char *argv[]){
 
             Camera& cam = cams[ camsIter.next() ];
 
+            if (!valRender.empty() && step % 1 == 0){
+                int i=0;
+                for(auto& cam: cams) {
+                    
+                    torch::Tensor rgb = model.forward(cam, step);
+                    cv::Mat image = tensorToImage(rgb.detach().cpu());
+                    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_" + std::to_string(i) + ".png")).string(), image);
+                
+                    i++;
+                }
+            }
+
             model.optimizersZeroGrad();
 
             torch::Tensor rgb = model.forward(cam, step);
@@ -142,15 +155,6 @@ int main(int argc, char *argv[]){
             model.optimizersStep();
             model.schedulersStep(step);
             model.afterTrain(step);
-
-            
-
-            if (!valRender.empty() && step % 10 == 0){
-                torch::Tensor rgb = model.forward(*valCam, step);
-                cv::Mat image = tensorToImage(rgb.detach().cpu());
-                cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-                cv::imwrite((fs::path(valRender) / (std::to_string(step) + ".png")).string(), image);
-            }
         }
 
         model.savePlySplat(outputScene);

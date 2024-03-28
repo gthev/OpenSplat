@@ -225,11 +225,13 @@ std::tuple<std::vector<Camera>, Camera *> InputData::getCameras(bool validate, c
         }
 
         std::vector<Camera> cams;
+        valIdx = cameras.size() - 1;
         Camera *valCam = nullptr;
 
         for (size_t i = 0; i < cameras.size(); i++){
-            if (i != valIdx) cams.push_back(cameras[i]);
-            else valCam = &cameras[i];
+            /* if (i != valIdx) cams.push_back(cameras[i]);
+            else valCam = &cameras[i]; */
+            cams.push_back(cameras[i]);
         }
 
         return std::make_tuple(cams, valCam);
