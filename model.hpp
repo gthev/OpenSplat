@@ -54,28 +54,34 @@ struct Model
       quats = randomQuatTensor(numPoints).to(device).requires_grad_();
     }
 
-    std::cout << means.index({Slice(None, 20), Slice()}) << std::endl;
-    std::cout << scales.index({Slice(None, 20), Slice()}) << std::endl;
-    std::cout << quats.index({Slice(None, 20), Slice()}) << std::endl;
-
     int dimSh = numShBases(shDegree);
     torch::Tensor shs = torch::zeros({numPoints, dimSh, 3}, torch::TensorOptions().dtype(torch::kFloat32).device(device));
 
     shs.index({Slice(), 0, Slice(None, 3)}) = rgb2sh(inputData.points.rgb.toType(torch::kFloat64) / 255.0).toType(torch::kFloat32);
     shs.index({Slice(), Slice(1, None), Slice(3, None)}) = 0.0f;
 
+    double lr_means = (this->hasMeshConstraint)? 0.00000000001 : 0.00016;
+    double lr_quats = (this->hasMeshConstraint)? 0.00000000001 : 0.001;
+    double lr_opacities = (this->hasMeshConstraint)? 0.00000000001 : 0.05;
+
+    double lr_scales = (this->hasMeshConstraint)? 0.0000000001 : 0.005;
+
+    double lr_fdc = (this->hasMeshConstraint)? 0.0025 : 0.0025;
+    double lr_frest = (this->hasMeshConstraint)? 0.000125 : 0.000125;
+    float base_opacities = (this->hasMeshConstraint)? 0.6f : 0.1f;
+
     featuresDc = shs.index({Slice(), 0, Slice()}).to(device).requires_grad_();
     featuresRest = shs.index({Slice(), Slice(1, None), Slice()}).to(device).requires_grad_();
-    opacities = torch::logit(0.1f * torch::ones({numPoints, 1})).to(device).requires_grad_();
+    opacities = torch::logit(base_opacities * torch::ones({numPoints, 1})).to(device).requires_grad_();
 
     backgroundColor = torch::tensor({background[0], background[1], background[2]}, device);
 
-    meansOpt = new torch::optim::Adam({means}, torch::optim::AdamOptions(0.00016));
-    scalesOpt = new torch::optim::Adam({scales}, torch::optim::AdamOptions(0.005));
-    quatsOpt = new torch::optim::Adam({quats}, torch::optim::AdamOptions(0.001));
-    featuresDcOpt = new torch::optim::Adam({featuresDc}, torch::optim::AdamOptions(0.0025));
-    featuresRestOpt = new torch::optim::Adam({featuresRest}, torch::optim::AdamOptions(0.000125));
-    opacitiesOpt = new torch::optim::Adam({opacities}, torch::optim::AdamOptions(0.05));
+    meansOpt = new torch::optim::Adam({means}, torch::optim::AdamOptions(lr_means));
+    scalesOpt = new torch::optim::Adam({scales}, torch::optim::AdamOptions(lr_scales));
+    quatsOpt = new torch::optim::Adam({quats}, torch::optim::AdamOptions(lr_quats));
+    featuresDcOpt = new torch::optim::Adam({featuresDc}, torch::optim::AdamOptions(lr_fdc));
+    featuresRestOpt = new torch::optim::Adam({featuresRest}, torch::optim::AdamOptions(lr_frest));
+    opacitiesOpt = new torch::optim::Adam({opacities}, torch::optim::AdamOptions(lr_opacities));
 
     meansOptScheduler = new OptimScheduler(meansOpt, 0.0000016f, maxSteps);
   }
