@@ -119,11 +119,15 @@ int main(int argc, char *argv[]){
         InfiniteRandomIterator<size_t> camsIter( camIndices );
 
         int imageSize = -1;
+
+        std::ofstream losses_write;
+        losses_write.open((fs::path(outputScene) / "losses.txt").string());
+
         for (size_t step = 1; step <= numIters; step++){
 
             Camera& cam = cams[ camsIter.next() ];
 
-            if (!valRender.empty() && step % 1 == 0){
+            if (!valRender.empty() && step % 10 == 0){
                 int i=0;
                 for(auto& cam: cams) {
                     
@@ -149,8 +153,11 @@ int main(int argc, char *argv[]){
 
             torch::Tensor mainLoss = model.mainLoss(rgb, gt, ssimWeight);
             mainLoss.backward();
+            float steploss = mainLoss.item<float>();
             
-            if (step % displayStep == 0) std::cout << "Step " << step << ": " << mainLoss.item<float>() << std::endl;
+            losses_write << steploss << " ";
+            
+            if (step % displayStep == 0) std::cout << "Step " << step << ": " << steploss << std::endl;
 
             model.optimizersStep();
             model.schedulersStep(step);
