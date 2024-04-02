@@ -201,12 +201,12 @@ void Model::optimizersZeroGrad(){
 }
 
 void Model::optimizersStep(){
-  meansOpt->step();
-  scalesOpt->step();
-  quatsOpt->step();
-  featuresDcOpt->step();
-  featuresRestOpt->step();
-  opacitiesOpt->step();
+    meansOpt->step();
+    quatsOpt->step();
+    scalesOpt->step();
+    featuresDcOpt->step();
+    featuresRestOpt->step();
+    opacitiesOpt->step();
 }
 
 void Model::schedulersStep(int step){

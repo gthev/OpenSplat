@@ -127,7 +127,7 @@ int main(int argc, char *argv[]){
 
             Camera& cam = cams[ camsIter.next() ];
 
-            if (!valRender.empty() && step % 10 == 0){
+            if (!valRender.empty() && step % 50 == 0){
                 int i=0;
                 for(auto& cam: cams) {
                     
