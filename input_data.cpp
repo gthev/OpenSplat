@@ -36,8 +36,9 @@ std::shared_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileNam
     }
     // Verification of required fields in input ply file
     {
-        const std::array<std::string, 14> requiredFields = {
-            "x", "y", "z", "f_dc_0", "f_dc_1", "f_dc_2", "opacity", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2", "rot_3"
+        const std::array<std::string, 17> requiredFields = {
+            "x", "y", "z", "nx", "ny", "nz", "f_dc_0", "f_dc_1", "f_dc_2", 
+            "opacity", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2", "rot_3"
         };
 
         const auto element = meshply.get_elements()[0];
@@ -63,17 +64,20 @@ std::shared_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileNam
 
     std::shared_ptr<MeshConstraintRaw> mc = std::make_shared<MeshConstraintRaw>();
     mc->means = std::vector<float>(nrgauss*3);
+    mc->normals = std::vector<float>(nrgauss*3);
     mc->colors = std::vector<float>(nrgauss*3);
     mc->scales = std::vector<float>(nrgauss*3);
     mc->quats = std::vector<float>(nrgauss*4);
 
     // read from file here...
     std::shared_ptr<tinyply::PlyData> means;
+    std::shared_ptr<tinyply::PlyData> normals;
     std::shared_ptr<tinyply::PlyData> colors;
     std::shared_ptr<tinyply::PlyData> scales;
     std::shared_ptr<tinyply::PlyData> quats;
 
     means = meshply.request_properties_from_element("vertex", {"x", "y", "z"});
+    normals = meshply.request_properties_from_element("vertex", {"nx", "ny", "nz"});
     colors = meshply.request_properties_from_element("vertex", {"f_dc_0", "f_dc_1", "f_dc_2"});
     scales = meshply.request_properties_from_element("vertex", {"scale_0", "scale_1", "scale_2"});
     quats = meshply.request_properties_from_element("vertex", {"rot_0", "rot_1", "rot_2", "rot_3"});
@@ -87,6 +91,9 @@ std::shared_ptr<MeshConstraintRaw> loadMeshConstraint(const std::string& fileNam
     {
         size_t num_b = means->buffer.size_bytes();
         memcpy(mc->means.data(), means->buffer.get(), num_b);
+
+        num_b = normals->buffer.size_bytes();
+        memcpy(mc->normals.data(), normals->buffer.get(), num_b);
         
         num_b = colors->buffer.size_bytes();
         memcpy(mc->colors.data(), colors->buffer.get(), num_b);

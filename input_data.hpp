@@ -48,6 +48,7 @@ struct Camera{
 
 struct MeshConstraintRaw {
   std::vector<float> means;
+  std::vector<float> normals;
   std::vector<float> colors;
   std::vector<float> scales;
   std::vector<float> quats;
@@ -57,6 +58,7 @@ struct MeshConstraint {
     std::shared_ptr<MeshConstraintRaw> _impl;
 
     torch::Tensor scales;
+    torch::Tensor normals;
     torch::Tensor quats;
 };
 
