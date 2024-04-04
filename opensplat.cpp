@@ -124,7 +124,8 @@ int main(int argc, char *argv[]){
         int imageSize = -1;
 
         std::ofstream losses_write;
-        losses_write.open((fs::path(outputScene) / "losses.txt").string());
+        std::string losses_path = (fs::path(outputScene).parent_path() / "losses.txt").string();
+        losses_write.open(losses_path);
 
         for (size_t step = 1; step <= numIters; step++){
 
@@ -169,6 +170,9 @@ int main(int argc, char *argv[]){
 
         model.savePlySplat(outputScene);
         // model.saveDebugPly("debug.ply");
+
+        std::cout << "Wrote losses to " << losses_path << std::endl;
+        losses_write.close();
 
         // Validate
         if (valCam != nullptr){
