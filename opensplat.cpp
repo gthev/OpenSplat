@@ -19,7 +19,9 @@ int main(int argc, char *argv[]){
         ("val-image", "Filename of the image to withhold for validating scene loss", cxxopts::value<std::string>()->default_value("random"))
         ("val-render", "Path of the directory where to render validation images", cxxopts::value<std::string>()->default_value(""))
         ("cpu", "Force CPU execution")
+        
         ("mesh-file", "Filename of a .ply file specifying the gaussians defining the structure of input", cxxopts::value<std::string>()->default_value(""))
+        ("fixed", "No spliting/duplicating/pruning of gaussians")
 
         ("n,num-iters", "Number of iterations to run", cxxopts::value<int>()->default_value("30000"))
         ("d,downscale-factor", "Scale input images by this factor.", cxxopts::value<float>()->default_value("1"))
@@ -56,6 +58,7 @@ int main(int argc, char *argv[]){
         return EXIT_SUCCESS;
     }
 
+    const bool fixedPoints = result.count("fixed") > 0;
     const std::string projectRoot = result["input"].as<std::string>();
     const std::string outputScene = result["output"].as<std::string>();
     const int saveEvery = result["save-every"].as<int>(); 
@@ -71,10 +74,10 @@ int main(int argc, char *argv[]){
     const int shDegree = result["sh-degree"].as<int>();
     const int shDegreeInterval = result["sh-degree-interval"].as<int>();
     const float ssimWeight = result["ssim-weight"].as<float>();
-    const int refineEvery = result["refine-every"].as<int>();
+    const int refineEvery = (fixedPoints)? 2 * numIters : result["refine-every"].as<int>();
     const int warmupLength = result["warmup-length"].as<int>();
     const int resetAlphaEvery = result["reset-alpha-every"].as<int>();
-    const int stopSplitAt = result["stop-split-at"].as<int>();
+    const int stopSplitAt = (fixedPoints) ? 1 : result["stop-split-at"].as<int>();
     const float densifyGradThresh = result["densify-grad-thresh"].as<float>();
     const float densifySizeThresh = result["densify-size-thresh"].as<float>();
     const int stopScreenSizeAt = result["stop-screen-size-at"].as<int>();
