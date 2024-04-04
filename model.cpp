@@ -165,7 +165,6 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
 
         float z = camDepths[i].item<float>();
 
-        // DEBUG
         int pxid = y * width + x;
 
         //this->featuresDc[i] = rgb2sh(torch::tensor({static_cast<float>(x) / width, static_cast<float>(y) / height, 0.f}));
