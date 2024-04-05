@@ -18,6 +18,7 @@ int main(int argc, char *argv[]){
         ("val", "Withhold a camera shot for validating the scene loss")
         ("val-image", "Filename of the image to withhold for validating scene loss", cxxopts::value<std::string>()->default_value("random"))
         ("val-render", "Path of the directory where to render validation images", cxxopts::value<std::string>()->default_value(""))
+        ("val-every", "Dump evaluation images every this amount of iterations", cxxopts::value<int>()->default_value("50"))
         ("cpu", "Force CPU execution")
         
         ("mesh-file", "Filename of a .ply file specifying the gaussians defining the structure of input", cxxopts::value<std::string>()->default_value(""))
@@ -65,6 +66,7 @@ int main(int argc, char *argv[]){
     const bool validate = result.count("val") > 0 || result.count("val-render") > 0;
     const std::string valImage = result["val-image"].as<std::string>();
     const std::string valRender = result["val-render"].as<std::string>();
+    const int valEvery = result["val-every"].as<int>();
     if (!valRender.empty() && !fs::exists(valRender)) fs::create_directories(valRender);
 
     const float downScaleFactor = (std::max)(result["downscale-factor"].as<float>(), 1.0f);
@@ -131,7 +133,7 @@ int main(int argc, char *argv[]){
 
             Camera& cam = cams[ camsIter.next() ];
 
-            if (!valRender.empty() && step % 50 == 0){
+            if (!valRender.empty() && step % valEvery == 0){
                 int i=0;
                 for(auto& cam: cams) {
                     
