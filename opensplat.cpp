@@ -20,7 +20,7 @@ int main(int argc, char *argv[]){
         ("val-render", "Path of the directory where to render validation images", cxxopts::value<std::string>()->default_value(""))
         ("val-every", "Dump evaluation images every this amount of iterations", cxxopts::value<int>()->default_value("50"))
         ("cpu", "Force CPU execution")
-        
+        ("dumpdiffuse", "Does one forward per camera, and dump gaussian splats assuming everything is diffuse")
         ("mesh-file", "Filename of a .ply file specifying the gaussians defining the structure of input", cxxopts::value<std::string>()->default_value(""))
         ("fixed", "No spliting/duplicating/pruning of gaussians")
 
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]){
     const bool fixedPoints = result.count("fixed") > 0;
     const std::string projectRoot = result["input"].as<std::string>();
     const std::string outputScene = result["output"].as<std::string>();
+    const bool dumpdiffuse = result["dumpdiffuse"].as<bool>();
     const int saveEvery = result["save-every"].as<int>(); 
     const bool validate = result.count("val") > 0 || result.count("val-render") > 0;
     const std::string valImage = result["val-image"].as<std::string>();
@@ -91,7 +92,7 @@ int main(int argc, char *argv[]){
     torch::Device device = torch::kCPU;
     int displayStep = 1;
 
-    if (torch::cuda::is_available() && result.count("cpu") == 0) {
+    if (torch::cuda::is_available() && result.count("cpu") == 0 && !dumpdiffuse) {
         std::cout << "Using CUDA" << std::endl;
         device = torch::kCUDA;
         displayStep = 10;
@@ -127,6 +128,33 @@ int main(int argc, char *argv[]){
         int imageSize = -1;
 
         std::vector<std::vector<float>> lossesByCamera(cams.size());
+
+        if(dumpdiffuse) {
+            std::cout << "Starting diffuse dumping\n";
+            int numPoints = model.means.sizes()[0];
+            model.featuresDc = model.featuresDc.detach();
+            std::vector<bool> done(numPoints, false);
+            int remaining = numPoints;
+
+            int i=0;
+            for(auto& cam: cams) {
+                int numdone = model.forward_dump(cam, 1, done);
+                remaining -= numdone;
+                std::cout << "Camera " << i << ": " << numdone << " extracted\n";
+                i++;
+                //throw std::runtime_error("NYI dump");
+                //break;
+                if(remaining <= 0) break;
+            }
+            std::cout << "Remaining: " << remaining << std::endl;
+            std::cout << "Finished, dumpig to file\n";
+            model.savePlySplat("output_diffusesplats.ply");
+            return 0;
+        }
+
+        std::ofstream losses_write;
+        std::string losses_path = (fs::path(outputScene).parent_path() / "losses.txt").string();
+        losses_write.open(losses_path);
 
         for (size_t step = 1; step <= numIters; step++){
 

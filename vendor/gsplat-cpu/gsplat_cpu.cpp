@@ -133,7 +133,8 @@ project_gaussians_forward_tensor_cpu(
 std::tuple<
     torch::Tensor,
     torch::Tensor,
-    std::vector<int32_t> *
+    std::vector<int32_t> *,
+    float *
 > rasterize_forward_tensor_cpu(
     const int width,
     const int height,
@@ -151,6 +152,13 @@ std::tuple<
     int numPoints = xys.size(0);
     float *pDepths = static_cast<float *>(camDepths.data_ptr());
     std::vector<int32_t> *px2gid = new std::vector<int32_t>[width * height];
+
+    float *zBuf = new float[width * height];
+    for(int i=0; i<width; i++) {
+        for(int j=0; j<height; j++) {
+            zBuf[j * width + i] = -1.0f;
+        }
+    }
 
     std::vector< size_t > gIndices( numPoints );
     std::iota( gIndices.begin(), gIndices.end(), 0 );
@@ -208,6 +216,8 @@ std::tuple<
                 size_t pixIdx = (i * width + j);
                 if (pDone[pixIdx]) continue;
 
+                if(zBuf[pixIdx] < 0) zBuf[pixIdx] = camDepths[gaussianId].item<float>();
+
                 float xCam = gX - j;
                 float yCam = gY - i;
                 float sigma = (
@@ -253,7 +263,7 @@ std::tuple<
         }
     }
 
-    return std::make_tuple(outImg, finalTs, px2gid);
+    return std::make_tuple(outImg, finalTs, px2gid, zBuf);
 }
 
 

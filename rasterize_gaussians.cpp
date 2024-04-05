@@ -149,6 +149,8 @@ torch::Tensor RasterizeGaussiansCPU::forward(AutogradContext *ctx,
             torch::Tensor opacity,
             torch::Tensor cov2d,
             torch::Tensor camDepths,
+            std::vector<int32_t> *&px2g,
+            float *&zB,
             int imgHeight,
             int imgWidth,
             torch::Tensor background
@@ -170,12 +172,16 @@ torch::Tensor RasterizeGaussiansCPU::forward(AutogradContext *ctx,
 
     torch::Tensor finalTs = std::get<1>(t);
     std::vector<int32_t> *px2gid = std::get<2>(t);
+    zB = std::get<3>(t);
 
     ctx->saved_data["imgWidth"] = imgWidth;
     ctx->saved_data["imgHeight"] = imgHeight;
     ctx->saved_data["px2gid"] = reinterpret_cast<int64_t>(px2gid);
+
     ctx->save_for_backward({ xys, conics, colors, opacity, background, cov2d, camDepths, finalTs });
-    
+
+    px2g = px2gid;
+
     return outImg;
 }
 

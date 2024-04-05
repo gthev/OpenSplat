@@ -99,6 +99,7 @@ struct Model
   }
 
   torch::Tensor forward(Camera &cam, int step);
+  int forward_dump(Camera &cam, int step, std::vector<bool> &done);
   void optimizersZeroGrad();
   void optimizersStep();
   void schedulersStep(int step);

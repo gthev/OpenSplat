@@ -6,6 +6,8 @@
 #include "tensor_math.hpp"
 #include "gsplat.hpp"
 
+#include "cv_utils.hpp"
+
 #ifdef USE_HIP
 #include <c10/hip/HIPCachingAllocator.h>
 #elif defined(USE_CUDA)
@@ -45,6 +47,170 @@ torch::Tensor psnr(const torch::Tensor& rendered, const torch::Tensor& gt){
 
 torch::Tensor l1(const torch::Tensor& rendered, const torch::Tensor& gt){
     return torch::abs(gt - rendered).mean();
+}
+
+int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
+
+    const float scaleFactor = getDownscaleFactor(step);
+    const float fx = cam.fx / scaleFactor;
+    const float fy = cam.fy / scaleFactor;
+    const float cx = cam.cx / scaleFactor;
+    const float cy = cam.cy / scaleFactor;
+    const int height = static_cast<int>(static_cast<float>(cam.height) / scaleFactor);
+    const int width = static_cast<int>(static_cast<float>(cam.width) / scaleFactor);
+
+    // TODO: these can be moved to Camera and computed only once?
+    torch::Tensor R = cam.camToWorld.index({Slice(None, 3), Slice(None, 3)});
+    torch::Tensor T = cam.camToWorld.index({Slice(None, 3), Slice(3,4)});
+
+    // Flip the z and y axes to align with gsplat conventions
+    R = torch::matmul(R, torch::diag(torch::tensor({1.0f, -1.0f, -1.0f}, R.device())));
+
+    // worldToCam
+    torch::Tensor Rinv = R.transpose(0, 1);
+    torch::Tensor Tinv = torch::matmul(-Rinv, T);
+
+    lastHeight = height;
+    lastWidth = width;
+
+    torch::Tensor viewMat = torch::eye(4, device);
+    viewMat.index_put_({Slice(None, 3), Slice(None, 3)}, Rinv);
+    viewMat.index_put_({Slice(None, 3), Slice(3, 4)}, Tinv);
+        
+    float fovX = 2.0f * std::atan(width / (2.0f * fx));
+    float fovY = 2.0f * std::atan(height / (2.0f * fy));
+
+    torch::Tensor projMat = projectionMatrix(0.001f, 1000.0f, fovX, fovY, device);
+    torch::Tensor colors =  torch::cat({featuresDc.index({Slice(), None, Slice()}), featuresRest}, 1);
+
+    torch::Tensor conics;
+    torch::Tensor depths; // GPU-only
+    torch::Tensor numTilesHit; // GPU-only
+    torch::Tensor cov2d; // CPU-only
+    torch::Tensor camDepths; // CPU-only
+    torch::Tensor rgb;
+    auto p = ProjectGaussiansCPU::apply(means, 
+                            torch::exp(scales), 
+                            1, 
+                            quats / quats.norm(2, {-1}, true), 
+                            viewMat, 
+                            torch::matmul(projMat, viewMat),
+                            fx, 
+                            fy,
+                            cx,
+                            cy,
+                            height,
+                            width);
+    xys = p[0];
+    radii = p[1];
+    conics = p[2];
+    cov2d = p[3];
+    camDepths = p[4];
+
+    if (radii.sum().item<float>() == 0.0f)
+        return 0;
+
+    // TODO: is this needed?
+    xys.retain_grad();
+
+    torch::Tensor viewDirs = means.detach() - T.transpose(0, 1).to(device);
+    viewDirs = viewDirs / viewDirs.norm(2, {-1}, true);
+    int degreesToUse = (std::min<int>)(step / shDegreeInterval, shDegree);
+    torch::Tensor rgbs;
+    
+    rgbs = SphericalHarmonicsCPU::apply(degreesToUse, viewDirs, colors);
+    
+    rgbs = torch::clamp_min(rgbs + 0.5f, 0.0f);
+
+    std::vector<int32_t> *pix2gid;
+    float *zBuf;
+    RasterizeGaussiansCPU::apply(
+            xys,
+            radii,
+            conics,
+            rgbs,
+            torch::sigmoid(opacities),
+            cov2d,
+            camDepths,
+            pix2gid,
+            zBuf,
+            height,
+            width,
+            backgroundColor);
+
+    int numDone = 0;
+
+    int numPoints = this->means.sizes()[0];
+    
+    /* std::cout << "img dimension: " << width << " " << height << std::endl;
+    std::cout << "xys shape: " << xys.sizes() << std::endl;
+    std::cout << xys.index({Slice(None, 30)}) << std::endl; */
+
+    torch::Tensor gt = cam.getImage(this->getDownscaleFactor(step));
+
+    torch::Tensor debugmat = torch::tensor({0.6, 0.3, 0.3}).repeat({height, width, 1});
+
+    //std::cout << "ground truth sizes: " << gt.sizes() << std::endl;
+
+    for(int i=0; i<numPoints; i++) {
+        if(done[i]) continue;
+
+        torch::Tensor pos_world = torch::ones({4});
+        pos_world.index_put_({Slice(None, 3)}, this->means[i]);
+        torch::Tensor pos_proj = torch::matmul(torch::matmul(projMat, viewMat), pos_world);
+        pos_proj = pos_proj.div(pos_proj[3]);
+
+        int x = static_cast<int>(0.5f * (pos_proj[0].item<float>() + 1.0f) * static_cast<float>(width) - 1.0f);
+        int y = static_cast<int>(0.5f * (pos_proj[1].item<float>() + 1.0f) * static_cast<float>(height) - 1.0f);
+
+        float z = camDepths[i].item<float>();
+
+        // DEBUG
+        int pxid = y * width + x;
+
+        //this->featuresDc[i] = rgb2sh(torch::tensor({static_cast<float>(x) / width, static_cast<float>(y) / height, 0.f}));
+        //this->featuresDc[i] = rgb2sh(torch::ones({3}) * static_cast<float>((static_cast<double>(pxid) / 120000)));
+        //this->featuresDc[i] = rgb2sh(torch::ones({3}) * (z - 0.999f) * 1000.0f);
+        //continue;
+
+
+/* 
+        torch::Tensor pos_img = xys[i];
+        int x = static_cast<int>(pos_img[0].item<float>());
+        int y = static_cast<int>(pos_img[1].item<float>()); */
+
+        std::vector<torch::Tensor> colors;
+
+        for(int dx=-1; dx<=1; dx++) {
+            for(int dy=-1; dy<=1; dy++) {
+                
+                int xx = std::clamp(x+dx, 0, width-1);
+                int yy = std::clamp(y+dy, 0, height-1);
+
+                int pxid = yy * width + xx;
+
+                if(std::abs(zBuf[pxid] - z) <= 0.0001) {
+                    torch::Tensor rgb_gt = gt[yy][xx];
+                    colors.push_back(rgb_gt);
+                }
+            }
+        }
+
+        if(!colors.empty()) {
+            torch::Tensor rgb_gt = torch::zeros({3});
+            for(const auto& c: colors) rgb_gt += c;
+            rgb_gt = rgb_gt.div(torch::Scalar((
+                static_cast<int>(colors.size()))));
+            this->featuresDc[i] = rgb2sh(rgb_gt);
+            numDone++;
+            done[i] = true;
+        }
+    }
+
+    delete[] pix2gid;
+    delete[] zBuf;
+
+    return numDone;
 }
 
 torch::Tensor Model::forward(Camera& cam, int step){
@@ -158,6 +324,9 @@ torch::Tensor Model::forward(Camera& cam, int step){
     
     rgbs = torch::clamp_min(rgbs + 0.5f, 0.0f);
 
+    std::vector<int32_t> *pix2gid;
+    float *zBuf;
+
     if (device == torch::kCPU){
         rgb = RasterizeGaussiansCPU::apply(
                 xys,
@@ -167,6 +336,8 @@ torch::Tensor Model::forward(Camera& cam, int step){
                 torch::sigmoid(opacities),
                 cov2d,
                 camDepths,
+                pix2gid,
+                zBuf,
                 height,
                 width,
                 backgroundColor);

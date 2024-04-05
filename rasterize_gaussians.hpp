@@ -48,6 +48,8 @@ public:
             torch::Tensor opacity,
             torch::Tensor cov2d,
             torch::Tensor camDepths,
+            std::vector<int32_t> *&px2g,
+            float *&zBuf,
             int imgHeight,
             int imgWidth,
             torch::Tensor background);

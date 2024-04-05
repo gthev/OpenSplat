@@ -36,7 +36,8 @@ project_gaussians_forward_tensor_cpu(
 std::tuple<
     torch::Tensor,
     torch::Tensor,
-    std::vector<int32_t> *
+    std::vector<int32_t> *,
+    float *
 > rasterize_forward_tensor_cpu(
     const int width,
     const int height,
