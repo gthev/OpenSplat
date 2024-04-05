@@ -62,7 +62,7 @@ struct Model
 
     //double lr_means = (this->hasMeshConstraint)? 0.00000000001 : 0.00016;
     //double lr_quats = (this->hasMeshConstraint)? 0.00000000001 : 0.001;
-    double lr_opacities = (this->hasMeshConstraint)? 0.00000000001 : 0.05;
+    //double lr_opacities = (this->hasMeshConstraint)? 0.00000000001 : 0.05;
 
     //double lr_scales = (this->hasMeshConstraint)? 0.0000000001 : 0.005;
 
@@ -74,14 +74,15 @@ struct Model
     featuresRest = shs.index({Slice(), Slice(1, None), Slice()}).to(device).requires_grad_();
     opacities = torch::logit(base_opacities * torch::ones({numPoints, 1})).to(device).requires_grad_();
 
-    backgroundColor = torch::tensor({background[0], background[1], background[2]}, device);
+    //backgroundColor = torch::tensor({background[0], background[1], background[2]}, device);
+    backgroundColor = torch::tensor({0.63, 0.02, 0.54}, device);
 
     //meansOpt = new torch::optim::Adam({means}, torch::optim::AdamOptions(lr_means));
     //scalesOpt = new torch::optim::Adam({scales}, torch::optim::AdamOptions(lr_scales));
     //quatsOpt = new torch::optim::Adam({quats}, torch::optim::AdamOptions(lr_quats));
     featuresDcOpt = new torch::optim::Adam({featuresDc}, torch::optim::AdamOptions(lr_fdc));
     featuresRestOpt = new torch::optim::Adam({featuresRest}, torch::optim::AdamOptions(lr_frest));
-    opacitiesOpt = new torch::optim::Adam({opacities}, torch::optim::AdamOptions(lr_opacities));
+    //opacitiesOpt = new torch::optim::Adam({opacities}, torch::optim::AdamOptions(lr_opacities));
 
     //meansOptScheduler = new OptimScheduler(meansOpt, 0.0000016f, maxSteps);
   }
@@ -93,7 +94,7 @@ struct Model
     //delete quatsOpt;
     delete featuresDcOpt;
     delete featuresRestOpt;
-    delete opacitiesOpt;
+    //delete opacitiesOpt;
 
     //delete meansOptScheduler;
   }
@@ -122,7 +123,7 @@ struct Model
   //torch::optim::Adam *quatsOpt;
   torch::optim::Adam *featuresDcOpt;
   torch::optim::Adam *featuresRestOpt;
-  torch::optim::Adam *opacitiesOpt;
+  //torch::optim::Adam *opacitiesOpt;
 
   //OptimScheduler *meansOptScheduler;
 

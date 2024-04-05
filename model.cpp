@@ -197,7 +197,7 @@ void Model::optimizersZeroGrad(){
   //quatsOpt->zero_grad();
   featuresDcOpt->zero_grad();
   featuresRestOpt->zero_grad();
-  opacitiesOpt->zero_grad();
+  //opacitiesOpt->zero_grad();
 }
 
 void Model::optimizersStep(){
@@ -206,7 +206,7 @@ void Model::optimizersStep(){
     //scalesOpt->step();
     featuresDcOpt->step();
     featuresRestOpt->step();
-    opacitiesOpt->step();
+    //opacitiesOpt->step();
 }
 
 void Model::schedulersStep(int step){
@@ -368,7 +368,7 @@ void Model::afterTrain(int step){
             //addToOptimizer(quatsOpt, quats, splitIdcs, nSplitSamples);
             addToOptimizer(featuresDcOpt, featuresDc, splitIdcs, nSplitSamples);
             addToOptimizer(featuresRestOpt, featuresRest, splitIdcs, nSplitSamples);
-            addToOptimizer(opacitiesOpt, opacities, splitIdcs, nSplitSamples);
+            //addToOptimizer(opacitiesOpt, opacities, splitIdcs, nSplitSamples);
             
             torch::Tensor dupIdcs = torch::where(dups)[0];
             //addToOptimizer(meansOpt, means, dupIdcs, 1);
@@ -376,7 +376,7 @@ void Model::afterTrain(int step){
             //addToOptimizer(quatsOpt, quats, dupIdcs, 1);
             addToOptimizer(featuresDcOpt, featuresDc, dupIdcs, 1);
             addToOptimizer(featuresRestOpt, featuresRest, dupIdcs, 1);
-            addToOptimizer(opacitiesOpt, opacities, dupIdcs, 1);
+            //addToOptimizer(opacitiesOpt, opacities, dupIdcs, 1);
 
             splitsMask = torch::cat({
                 splits,
@@ -419,7 +419,7 @@ void Model::afterTrain(int step){
                 //removeFromOptimizer(quatsOpt, quats, culls);
                 removeFromOptimizer(featuresDcOpt, featuresDc, culls);
                 removeFromOptimizer(featuresRestOpt, featuresRest, culls);
-                removeFromOptimizer(opacitiesOpt, opacities, culls);
+                //removeFromOptimizer(opacitiesOpt, opacities, culls);
                 
                 std::cout << "Culled " << (numPointsBefore - means.size(0)) << " gaussians, remaining " << means.size(0) << std::endl;
             }
@@ -430,7 +430,7 @@ void Model::afterTrain(int step){
             opacities = torch::clamp_max(opacities, torch::logit(torch::tensor(resetValue)).item<float>());
 
             // Reset optimizer
-            torch::Tensor param = opacitiesOpt->param_groups()[0].params()[0];
+            /* torch::Tensor param = opacitiesOpt->param_groups()[0].params()[0];
             #if TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR > 1
                 auto pId = param.unsafeGetTensorImpl();
             #else
@@ -439,7 +439,7 @@ void Model::afterTrain(int step){
             auto paramState = std::make_unique<torch::optim::AdamParamState>(static_cast<torch::optim::AdamParamState&>(*opacitiesOpt->state()[pId]));
             paramState->exp_avg(torch::zeros_like(paramState->exp_avg()));
             paramState->exp_avg_sq(torch::zeros_like(paramState->exp_avg_sq()));
-            std::cout << "Alpha reset" << std::endl;
+            std::cout << "Alpha reset" << std::endl; */
         }
 
         // Clear
