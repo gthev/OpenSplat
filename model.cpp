@@ -141,7 +141,7 @@ torch::Tensor Model::forward(Camera& cam, int step){
         return backgroundColor.repeat({height, width, 1});
 
     // TODO: is this needed?
-    xys.retain_grad();
+    // xys.retain_grad();
 
     torch::Tensor viewDirs = means.detach() - T.transpose(0, 1).to(device);
     viewDirs = viewDirs / viewDirs.norm(2, {-1}, true);
@@ -192,25 +192,25 @@ torch::Tensor Model::forward(Camera& cam, int step){
 }
 
 void Model::optimizersZeroGrad(){
-  meansOpt->zero_grad();
-  scalesOpt->zero_grad();
-  quatsOpt->zero_grad();
+  //meansOpt->zero_grad();
+  //scalesOpt->zero_grad();
+  //quatsOpt->zero_grad();
   featuresDcOpt->zero_grad();
   featuresRestOpt->zero_grad();
   opacitiesOpt->zero_grad();
 }
 
 void Model::optimizersStep(){
-    meansOpt->step();
-    quatsOpt->step();
-    scalesOpt->step();
+    //meansOpt->step();
+    //quatsOpt->step();
+    //scalesOpt->step();
     featuresDcOpt->step();
     featuresRestOpt->step();
     opacitiesOpt->step();
 }
 
 void Model::schedulersStep(int step){
-  meansOptScheduler->step(step);
+  //meansOptScheduler->step(step);
 }
 
 int Model::getDownscaleFactor(int step){
@@ -363,17 +363,17 @@ void Model::afterTrain(int step){
 
             torch::Tensor splitIdcs = torch::where(splits)[0];
 
-            addToOptimizer(meansOpt, means, splitIdcs, nSplitSamples);
-            addToOptimizer(scalesOpt, scales, splitIdcs, nSplitSamples);
-            addToOptimizer(quatsOpt, quats, splitIdcs, nSplitSamples);
+            //addToOptimizer(meansOpt, means, splitIdcs, nSplitSamples);
+            //addToOptimizer(scalesOpt, scales, splitIdcs, nSplitSamples);
+            //addToOptimizer(quatsOpt, quats, splitIdcs, nSplitSamples);
             addToOptimizer(featuresDcOpt, featuresDc, splitIdcs, nSplitSamples);
             addToOptimizer(featuresRestOpt, featuresRest, splitIdcs, nSplitSamples);
             addToOptimizer(opacitiesOpt, opacities, splitIdcs, nSplitSamples);
             
             torch::Tensor dupIdcs = torch::where(dups)[0];
-            addToOptimizer(meansOpt, means, dupIdcs, 1);
-            addToOptimizer(scalesOpt, scales, dupIdcs, 1);
-            addToOptimizer(quatsOpt, quats, dupIdcs, 1);
+            //addToOptimizer(meansOpt, means, dupIdcs, 1);
+            //addToOptimizer(scalesOpt, scales, dupIdcs, 1);
+            //addToOptimizer(quatsOpt, quats, dupIdcs, 1);
             addToOptimizer(featuresDcOpt, featuresDc, dupIdcs, 1);
             addToOptimizer(featuresRestOpt, featuresRest, dupIdcs, 1);
             addToOptimizer(opacitiesOpt, opacities, dupIdcs, 1);
@@ -414,9 +414,9 @@ void Model::afterTrain(int step){
                 featuresRest = featuresRest.index({~culls}).detach().requires_grad_();
                 opacities = opacities.index({~culls}).detach().requires_grad_();
 
-                removeFromOptimizer(meansOpt, means, culls);
-                removeFromOptimizer(scalesOpt, scales, culls);
-                removeFromOptimizer(quatsOpt, quats, culls);
+                //removeFromOptimizer(meansOpt, means, culls);
+                //removeFromOptimizer(scalesOpt, scales, culls);
+                //removeFromOptimizer(quatsOpt, quats, culls);
                 removeFromOptimizer(featuresDcOpt, featuresDc, culls);
                 removeFromOptimizer(featuresRestOpt, featuresRest, culls);
                 removeFromOptimizer(opacitiesOpt, opacities, culls);

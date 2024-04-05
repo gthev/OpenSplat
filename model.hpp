@@ -41,17 +41,17 @@ struct Model
 
     torch::manual_seed(42);
 
-    means = inputData.points.xyz.to(device).requires_grad_();
+    means = inputData.points.xyz.to(device);
 
     if (hasMeshConstraint)
     {
-      scales = (inputData.points.mesh->scales + std::log(scale)).to(device).requires_grad_();
-      quats = inputData.points.mesh->quats.to(device).requires_grad_();
+      scales = (inputData.points.mesh->scales + std::log(scale)).to(device);
+      quats = inputData.points.mesh->quats.to(device);
     }
     else
     {
-      scales = PointsTensor(inputData.points.xyz).scales().repeat({1, 3}).log().to(device).requires_grad_();
-      quats = randomQuatTensor(numPoints).to(device).requires_grad_();
+      scales = PointsTensor(inputData.points.xyz).scales().repeat({1, 3}).log().to(device);
+      quats = randomQuatTensor(numPoints).to(device);
     }
 
     int dimSh = numShBases(shDegree);
@@ -60,11 +60,11 @@ struct Model
     shs.index({Slice(), 0, Slice(None, 3)}) = rgb2sh(inputData.points.rgb.toType(torch::kFloat64) / 255.0).toType(torch::kFloat32);
     shs.index({Slice(), Slice(1, None), Slice(3, None)}) = 0.0f;
 
-    double lr_means = (this->hasMeshConstraint)? 0.00000000001 : 0.00016;
-    double lr_quats = (this->hasMeshConstraint)? 0.00000000001 : 0.001;
+    //double lr_means = (this->hasMeshConstraint)? 0.00000000001 : 0.00016;
+    //double lr_quats = (this->hasMeshConstraint)? 0.00000000001 : 0.001;
     double lr_opacities = (this->hasMeshConstraint)? 0.00000000001 : 0.05;
 
-    double lr_scales = (this->hasMeshConstraint)? 0.0000000001 : 0.005;
+    //double lr_scales = (this->hasMeshConstraint)? 0.0000000001 : 0.005;
 
     double lr_fdc = (this->hasMeshConstraint)? 0.0025 : 0.0025;
     double lr_frest = (this->hasMeshConstraint)? 0.000125 : 0.000125;
@@ -76,26 +76,26 @@ struct Model
 
     backgroundColor = torch::tensor({background[0], background[1], background[2]}, device);
 
-    meansOpt = new torch::optim::Adam({means}, torch::optim::AdamOptions(lr_means));
-    scalesOpt = new torch::optim::Adam({scales}, torch::optim::AdamOptions(lr_scales));
-    quatsOpt = new torch::optim::Adam({quats}, torch::optim::AdamOptions(lr_quats));
+    //meansOpt = new torch::optim::Adam({means}, torch::optim::AdamOptions(lr_means));
+    //scalesOpt = new torch::optim::Adam({scales}, torch::optim::AdamOptions(lr_scales));
+    //quatsOpt = new torch::optim::Adam({quats}, torch::optim::AdamOptions(lr_quats));
     featuresDcOpt = new torch::optim::Adam({featuresDc}, torch::optim::AdamOptions(lr_fdc));
     featuresRestOpt = new torch::optim::Adam({featuresRest}, torch::optim::AdamOptions(lr_frest));
     opacitiesOpt = new torch::optim::Adam({opacities}, torch::optim::AdamOptions(lr_opacities));
 
-    meansOptScheduler = new OptimScheduler(meansOpt, 0.0000016f, maxSteps);
+    //meansOptScheduler = new OptimScheduler(meansOpt, 0.0000016f, maxSteps);
   }
 
   ~Model()
   {
-    delete meansOpt;
-    delete scalesOpt;
-    delete quatsOpt;
+    //delete meansOpt;
+    //delete scalesOpt;
+    //delete quatsOpt;
     delete featuresDcOpt;
     delete featuresRestOpt;
     delete opacitiesOpt;
 
-    delete meansOptScheduler;
+    //delete meansOptScheduler;
   }
 
   torch::Tensor forward(Camera &cam, int step);
@@ -117,14 +117,14 @@ struct Model
   torch::Tensor featuresRest;
   torch::Tensor opacities;
 
-  torch::optim::Adam *meansOpt;
-  torch::optim::Adam *scalesOpt;
-  torch::optim::Adam *quatsOpt;
+  //torch::optim::Adam *meansOpt;
+  //torch::optim::Adam *scalesOpt;
+  //torch::optim::Adam *quatsOpt;
   torch::optim::Adam *featuresDcOpt;
   torch::optim::Adam *featuresRestOpt;
   torch::optim::Adam *opacitiesOpt;
 
-  OptimScheduler *meansOptScheduler;
+  //OptimScheduler *meansOptScheduler;
 
   torch::Tensor radii; // set in forward()
   torch::Tensor xys;   // set in forward()
