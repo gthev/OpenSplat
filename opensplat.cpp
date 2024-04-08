@@ -121,13 +121,12 @@ int main(int argc, char *argv[]){
 
         std::vector< size_t > camIndices( cams.size() );
         std::iota( camIndices.begin(), camIndices.end(), 0 );
+        for(int i=0; i<cams.size(); i++) cams[i].idx = i;
         InfiniteRandomIterator<size_t> camsIter( camIndices );
 
         int imageSize = -1;
 
-        std::ofstream losses_write;
-        std::string losses_path = (fs::path(outputScene).parent_path() / "losses.txt").string();
-        losses_write.open(losses_path);
+        std::vector<std::vector<float>> lossesByCamera(cams.size());
 
         for (size_t step = 1; step <= numIters; step++){
 
@@ -161,7 +160,7 @@ int main(int argc, char *argv[]){
             mainLoss.backward();
             float steploss = mainLoss.item<float>();
             
-            losses_write << steploss << " ";
+            lossesByCamera[cam.idx].push_back(steploss);
             
             if (step % displayStep == 0) std::cout << "Step " << step << ": " << steploss << std::endl;
 
@@ -173,6 +172,34 @@ int main(int argc, char *argv[]){
         model.savePlySplat(outputScene);
         // model.saveDebugPly("debug.ply");
 
+        // Write losses to output file
+        std::ofstream losses_write;
+        std::string losses_path = (fs::path(outputScene).parent_path() / "losses.txt").string();
+        losses_write.open(losses_path);
+        losses_write << cams.size() << std::endl;
+        for(int i=0; i<cams.size(); i++) {
+            for(const auto& x: lossesByCamera[i]) losses_write << x << " ";
+            losses_write << std::endl;
+        }
+        // and now, average loss by iteration
+        int iteration = 0;
+        while(iteration < numIters) {
+            bool shouldcontinue = false;
+            float avgloss = 0.f;
+            int nrcams = 0;
+            for(int i=0; i<cams.size(); i++) {
+                if(iteration < lossesByCamera[i].size()) {
+                    shouldcontinue = true;
+                    nrcams++;
+                    avgloss += lossesByCamera[i][iteration];
+                }
+            }
+            if(!shouldcontinue) break;
+            else {
+                losses_write << (avgloss / nrcams) << " ";
+            }
+            iteration++;
+        }
         std::cout << "Wrote losses to " << losses_path << std::endl;
         losses_write.close();
 

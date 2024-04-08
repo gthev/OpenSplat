@@ -22,6 +22,7 @@ struct Camera{
     float k3 = 0;
     float p1 = 0;
     float p2 = 0;
+    int idx = 0;
     torch::Tensor camToWorld;
     std::string filePath = "";
     CameraType cameraType = CameraType::Perspective;
