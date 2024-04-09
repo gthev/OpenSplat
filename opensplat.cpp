@@ -143,7 +143,7 @@ int main(int argc, char *argv[]){
                 std::cout << "Camera " << i << ": " << numdone << " extracted\n";
                 i++;
                 //throw std::runtime_error("NYI dump");
-                //break;
+                break;
                 if(remaining <= 0) break;
             }
             std::cout << "Remaining: " << remaining << std::endl;
@@ -151,10 +151,6 @@ int main(int argc, char *argv[]){
             model.savePlySplat("output_diffusesplats.ply");
             return 0;
         }
-
-        std::ofstream losses_write;
-        std::string losses_path = (fs::path(outputScene).parent_path() / "losses.txt").string();
-        losses_write.open(losses_path);
 
         for (size_t step = 1; step <= numIters; step++){
 

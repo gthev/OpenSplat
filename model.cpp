@@ -160,12 +160,8 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
         torch::Tensor pos_proj = torch::matmul(torch::matmul(projMat, viewMat), pos_world);
         pos_proj = pos_proj.div(pos_proj[3]);
 
-        int x = static_cast<int>(0.5f * (pos_proj[0].item<float>() + 1.0f) * static_cast<float>(width) - 1.0f);
-        int y = static_cast<int>(0.5f * (pos_proj[1].item<float>() + 1.0f) * static_cast<float>(height) - 1.0f);
-
-        float z = camDepths[i].item<float>();
-
-        int pxid = y * width + x;
+/*         int x = static_cast<int>(0.5f * (pos_proj[0].item<float>() + 1.0f) * static_cast<float>(width) - 1.0f);
+        int y = static_cast<int>(0.5f * (pos_proj[1].item<float>() + 1.0f) * static_cast<float>(height) - 1.0f); */
 
         //this->featuresDc[i] = rgb2sh(torch::tensor({static_cast<float>(x) / width, static_cast<float>(y) / height, 0.f}));
         //this->featuresDc[i] = rgb2sh(torch::ones({3}) * static_cast<float>((static_cast<double>(pxid) / 120000)));
@@ -173,10 +169,14 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
         //continue;
 
 
-/* 
+
         torch::Tensor pos_img = xys[i];
         int x = static_cast<int>(pos_img[0].item<float>());
-        int y = static_cast<int>(pos_img[1].item<float>()); */
+        int y = static_cast<int>(pos_img[1].item<float>());
+
+        float z = camDepths[i].item<float>();
+
+        int pxid = y * width + x;
 
         std::vector<torch::Tensor> colors;
 
@@ -190,6 +190,14 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
 
                 if(std::abs(zBuf[pxid] - z) <= 0.0001) {
                     torch::Tensor rgb_gt = gt[yy][xx];
+
+                    //
+                    for(int p = std::max(0, xx-1); p < std::min(width, xx+1); p++) {
+                        for(int q = std::max(0, yy-1); q < std::min(height, yy+1); q++) {
+                            debugmat[q][p] = rgb_gt;
+                        }
+                    }//
+
                     colors.push_back(rgb_gt);
                 }
             }
@@ -205,6 +213,12 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
             done[i] = true;
         }
     }
+
+    //
+    cv::Mat image = tensorToImage(debugmat.detach().cpu());
+    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+    cv::imwrite("debugmat.png", image);
+    //
 
     delete[] pix2gid;
     delete[] zBuf;
