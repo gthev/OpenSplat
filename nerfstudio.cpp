@@ -210,6 +210,7 @@ namespace ns
         memcpy(r->points.data(), mcr->means.data(), 3 * nrgauss * sizeof(float));
         mc->scales = torch::from_blob(mcr->scales.data(), {static_cast<long int>(nrgauss), 3}, torch::kFloat32);
         mc->quats = torch::from_blob(mcr->quats.data(), {static_cast<long int>(nrgauss), 4}, torch::kFloat32);
+        mc->normals = torch::from_blob(mcr->normals.data(), {static_cast<long int>(nrgauss), 3}, torch::kFloat32);
 
         return {r, std::move(mc)};
     }
