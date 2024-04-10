@@ -249,10 +249,10 @@ namespace ns
         torch::Tensor poses = std::get<0>(r);
         ret.translation = std::get<1>(r);
         ret.scale = std::get<2>(r); */
-
         torch::Tensor poses = unorientedPoses.clone();
         ret.translation = torch::zeros({3});
         ret.scale = 1.0f;
+
 
         // aabbScale = [[-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]]
 

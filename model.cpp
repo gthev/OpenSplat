@@ -124,7 +124,7 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
 
     std::vector<int32_t> *pix2gid;
     float *zBuf;
-    RasterizeGaussiansCPU::apply(
+    rgb = RasterizeGaussiansCPU::apply(
             xys,
             radii,
             conics,
@@ -138,13 +138,11 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
             width,
             backgroundColor);
 
+    rgb = torch::clamp_max(rgb, 1.0f);
+
     int numDone = 0;
 
     int numPoints = this->means.sizes()[0];
-    
-    /* std::cout << "img dimension: " << width << " " << height << std::endl;
-    std::cout << "xys shape: " << xys.sizes() << std::endl;
-    std::cout << xys.index({Slice(None, 30)}) << std::endl; */
 
     torch::Tensor gt = cam.getImage(this->getDownscaleFactor(step));
 
@@ -154,21 +152,6 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
 
     for(int i=0; i<numPoints; i++) {
         if(done[i]) continue;
-
-        torch::Tensor pos_world = torch::ones({4});
-        pos_world.index_put_({Slice(None, 3)}, this->means[i]);
-        torch::Tensor pos_proj = torch::matmul(torch::matmul(projMat, viewMat), pos_world);
-        pos_proj = pos_proj.div(pos_proj[3]);
-
-/*         int x = static_cast<int>(0.5f * (pos_proj[0].item<float>() + 1.0f) * static_cast<float>(width) - 1.0f);
-        int y = static_cast<int>(0.5f * (pos_proj[1].item<float>() + 1.0f) * static_cast<float>(height) - 1.0f); */
-
-        //this->featuresDc[i] = rgb2sh(torch::tensor({static_cast<float>(x) / width, static_cast<float>(y) / height, 0.f}));
-        //this->featuresDc[i] = rgb2sh(torch::ones({3}) * static_cast<float>((static_cast<double>(pxid) / 120000)));
-        //this->featuresDc[i] = rgb2sh(torch::ones({3}) * (z - 0.999f) * 1000.0f);
-        //continue;
-
-
 
         torch::Tensor pos_img = xys[i];
         int x = static_cast<int>(pos_img[0].item<float>());
@@ -188,7 +171,7 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
 
                 int pxid = yy * width + xx;
 
-                if(std::abs(zBuf[pxid] - z) <= 0.0001) {
+                if(std::abs(zBuf[pxid] - z) <= 0.000001) {
                     torch::Tensor rgb_gt = gt[yy][xx];
 
                     //
@@ -218,6 +201,10 @@ int Model::forward_dump(Camera &cam, int step, std::vector<bool> &done) {
     cv::Mat image = tensorToImage(debugmat.detach().cpu());
     cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
     cv::imwrite("debugmat.png", image);
+    
+    cv::Mat render = tensorToImage(rgb.detach().cpu());
+    cv::cvtColor(render, render, cv::COLOR_RGB2BGR);
+    cv::imwrite("render.png", render);
     //
 
     delete[] pix2gid;

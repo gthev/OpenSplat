@@ -142,8 +142,6 @@ int main(int argc, char *argv[]){
                 remaining -= numdone;
                 std::cout << "Camera " << i << ": " << numdone << " extracted\n";
                 i++;
-                //throw std::runtime_error("NYI dump");
-                break;
                 if(remaining <= 0) break;
             }
             std::cout << "Remaining: " << remaining << std::endl;
