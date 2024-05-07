@@ -8,7 +8,7 @@ using namespace torch::indexing;
 torch::Tensor SSIM::eval(const torch::Tensor& rendered, const torch::Tensor& gt) {
     torch::Tensor img1 = gt.permute({2, 0, 1}).index({None, "..."});
     torch::Tensor img2 = rendered.permute({2, 0, 1}).index({None, "..."});
-    
+
     if (img1.device() != window.device()){
         window = window.to(img1.device());
     }

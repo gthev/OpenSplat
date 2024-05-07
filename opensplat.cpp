@@ -101,8 +101,10 @@ int main(int argc, char *argv[]){
 
     try{
         InputData inputData = inputDataFromX(projectRoot, meshInput);
+        for(int i=0; i<inputData.cameras.size(); i++) inputData.cameras[i].idx = i;
         for (Camera &cam : inputData.cameras){
-            cam.loadImage(downScaleFactor);
+            // ! on nerfstudio/colmap, I guess we'd have to put "true" here ?
+            cam.loadImage(downScaleFactor, true);
         }
 
         
@@ -121,7 +123,6 @@ int main(int argc, char *argv[]){
 
         std::vector< size_t > camIndices( cams.size() );
         std::iota( camIndices.begin(), camIndices.end(), 0 );
-        for(int i=0; i<cams.size(); i++) cams[i].idx = i;
         InfiniteRandomIterator<size_t> camsIter( camIndices );
 
         int imageSize = -1;
@@ -139,8 +140,11 @@ int main(int argc, char *argv[]){
                     torch::Tensor rgb = model.forward(cam, step);
                     cv::Mat image = tensorToImage(rgb.detach().cpu());
                     cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+                    torch::Tensor gt = cam.getImage(model.getDownscaleFactor(step));
+                    cv::Mat image_gt = tensorToImage(gt.detach().cpu());
+                    cv::cvtColor(image_gt, image_gt, cv::COLOR_RGB2BGR);
                     cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_" + std::to_string(i) + ".png")).string(), image);
-                
+                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_gt_" + std::to_string(i) + ".png")).string(), image_gt);
                     i++;
                 }
             }

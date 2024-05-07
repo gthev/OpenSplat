@@ -503,9 +503,14 @@ void Model::savePlySplat(const std::string &filename){
     torch::Tensor scalesCpu = scales.cpu() - std::log(scale);
     torch::Tensor quatsCpu = quats.cpu();
 
+    torch::Tensor normalsCpu = 
+        (this->hasMeshConstraint) ?
+        this->meshConstraint.normals.cpu() :
+        torch::zeros_like(means).cpu();
+
     for (size_t i = 0; i < numPoints; i++) {
         o.write(reinterpret_cast<const char *>(meansCpu[i].data_ptr()), sizeof(float) * 3);
-        o.write(reinterpret_cast<const char *>(zeros), sizeof(float) * 3); // TODO: do we need to write zero normals?
+        o.write(reinterpret_cast<const char *>(normalsCpu[i].data_ptr()), sizeof(float) * 3);
         o.write(reinterpret_cast<const char *>(featuresDcCpu[i].data_ptr()), sizeof(float) * featuresDcCpu.size(1));
         o.write(reinterpret_cast<const char *>(featuresRestCpu[i].data_ptr()), sizeof(float) * featuresRestCpu.size(1));
         o.write(reinterpret_cast<const char *>(opacitiesCpu[i].data_ptr()), sizeof(float) * 1);

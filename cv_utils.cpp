@@ -1,14 +1,14 @@
 #include "cv_utils.hpp"
 
-cv::Mat imreadRGB(const std::string &filename){
+cv::Mat imreadRGB(const std::string &filename, const bool& changeFormat){
     cv::Mat cImg = cv::imread(filename);
-    cv::cvtColor(cImg, cImg, cv::COLOR_BGR2RGB);
+    if(changeFormat) cv::cvtColor(cImg, cImg, cv::COLOR_BGR2RGB);
     return cImg;
 }
 
-void imwriteRGB(const std::string &filename, const cv::Mat &image){
+void imwriteRGB(const std::string &filename, const cv::Mat &image, const bool& changeFormat){
     cv::Mat rgb;
-    cv::cvtColor(image, rgb, cv::COLOR_RGB2BGR);
+    if(changeFormat) cv::cvtColor(image, rgb, cv::COLOR_RGB2BGR);
     cv::imwrite(filename, rgb);
 }
 

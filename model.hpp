@@ -66,8 +66,8 @@ struct Model
 
     double lr_scales = (this->hasMeshConstraint)? 0.0000000001 : 0.005;
 
-    double lr_fdc = (this->hasMeshConstraint)? 0.0025 : 0.0025;
-    double lr_frest = (this->hasMeshConstraint)? 0.000125 : 0.000125;
+    double lr_fdc = (this->hasMeshConstraint)? 0.0075 : 0.0025;
+    double lr_frest = (this->hasMeshConstraint)? 0.0002 : 0.000125;
     float base_opacities = (this->hasMeshConstraint)? 0.99f : 0.1f;
 
     featuresDc = shs.index({Slice(), 0, Slice()}).to(device).requires_grad_();

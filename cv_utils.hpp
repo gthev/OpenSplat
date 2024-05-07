@@ -6,8 +6,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-cv::Mat imreadRGB(const std::string &filename);
-void imwriteRGB(const std::string &filename, const cv::Mat &image);
+cv::Mat imreadRGB(const std::string &filename, const bool& changeImgFormat = true);
+void imwriteRGB(const std::string &filename, const cv::Mat &image, const bool& changeImgFormat = true);
 cv::Mat floatNxNtensorToMat(const torch::Tensor &t);
 torch::Tensor floatNxNMatToTensor(const cv::Mat &m);
 cv::Mat tensorToImage(const torch::Tensor &t);

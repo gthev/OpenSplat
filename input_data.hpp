@@ -40,7 +40,7 @@ struct Camera{
     std::vector<float> undistortionParameters();
     torch::Tensor getImage(int downscaleFactor);
 
-    void loadImage(float downscaleFactor);
+    void loadImage(float downscaleFactor, const bool& changeImgFormat = true);
     torch::Tensor K;
     torch::Tensor image;
 
