@@ -158,6 +158,10 @@ torch::Tensor Model::forward(Camera& cam, int step){
     
     rgbs = torch::clamp_min(rgbs + 0.5f, 0.0f);
 
+   /*  std::cout << means.index({98, Slice()}) << std::endl;
+    std::cout << colors.index({98, Slice()}) << std::endl;
+    std::cout << rgbs.index({98, Slice()}) << std::endl; */
+
     if (device == torch::kCPU){
         rgb = RasterizeGaussiansCPU::apply(
                 xys,
@@ -186,7 +190,7 @@ torch::Tensor Model::forward(Camera& cam, int step){
         #endif
     }
 
-    rgb = torch::clamp_max(rgb, 1.0f);
+    //rgb = torch::clamp_max(rgb, 1.0f);
 
     return rgb;
 }

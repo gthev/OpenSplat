@@ -137,6 +137,11 @@ void Camera::loadImage(float downscaleFactor, const bool& changeImgFormat){
 
     float scaleFactor = 1.0f / downscaleFactor;
     cv::Mat cImg = imreadRGB(filePath, changeImgFormat);
+    std::cout << cImg.type() << std::endl;
+
+    if(filePath.size() >= 3 && filePath.compare(filePath.size() - 3, 3, "hdr") == 0) {
+        hdr = true;
+    }
     
     float rescaleF = 1.0f;
     // If camera intrinsics don't match the image dimensions 

@@ -27,6 +27,7 @@ struct XYZ {
 struct PointSet {
     std::vector<std::array<float, 3> > points;
     std::vector<std::array<uint8_t, 3> > colors;
+    std::vector<std::array<float, 3> > hdrcolors;
 
     std::vector<std::array<float, 3> > normals;
     std::vector<uint8_t> views;

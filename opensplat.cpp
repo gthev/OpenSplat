@@ -143,8 +143,9 @@ int main(int argc, char *argv[]){
                     torch::Tensor gt = cam.getImage(model.getDownscaleFactor(step));
                     cv::Mat image_gt = tensorToImage(gt.detach().cpu());
                     cv::cvtColor(image_gt, image_gt, cv::COLOR_RGB2BGR);
-                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_" + std::to_string(i) + ".png")).string(), image);
-                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_gt_" + std::to_string(i) + ".png")).string(), image_gt);
+                    std::string extension( cam.hdr ? ".hdr" : ".png" );
+                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_" + std::to_string(i) + extension)).string(), image);
+                    cv::imwrite((fs::path(valRender) / (std::to_string(step) + "_gt_" + std::to_string(i) + extension)).string(), image_gt);
                     i++;
                 }
             }

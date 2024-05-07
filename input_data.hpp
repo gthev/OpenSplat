@@ -25,6 +25,7 @@ struct Camera{
     int idx = 0;
     torch::Tensor camToWorld;
     std::string filePath = "";
+    bool hdr = false;
     CameraType cameraType = CameraType::Perspective;
 
     Camera(){};
@@ -66,6 +67,7 @@ struct MeshConstraint {
 struct Points{
     torch::Tensor xyz;
     torch::Tensor rgb;
+    torch::Tensor hdr_rad;
 
     std::shared_ptr<MeshConstraint> mesh = nullptr;
 };

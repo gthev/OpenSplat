@@ -57,7 +57,10 @@ struct Model
     int dimSh = numShBases(shDegree);
     torch::Tensor shs = torch::zeros({numPoints, dimSh, 3}, torch::TensorOptions().dtype(torch::kFloat32).device(device));
 
-    shs.index({Slice(), 0, Slice(None, 3)}) = rgb2sh(inputData.points.rgb.toType(torch::kFloat64) / 255.0).toType(torch::kFloat32);
+    if (hasMeshConstraint) {
+      shs.index({Slice(), 0, Slice(None, 3)}) = rgb2sh(inputData.points.hdr_rad);
+    }
+    else shs.index({Slice(), 0, Slice(None, 3)}) = rgb2sh(inputData.points.rgb.toType(torch::kFloat64) / 255.0).toType(torch::kFloat32);
     shs.index({Slice(), Slice(1, None), Slice(3, None)}) = 0.0f;
 
     double lr_means = (this->hasMeshConstraint)? 0.00000000001 : 0.00016;

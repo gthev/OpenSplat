@@ -194,7 +194,7 @@ namespace ns
         mc->_impl = mcr;
         unsigned int nrgauss = mcr->means.size() / 3;
         r->points.resize(nrgauss);
-        r->colors.resize(nrgauss);
+        r->hdrcolors.resize(nrgauss);
 
         for (int i = 0; i < nrgauss; i++)
         {
@@ -202,9 +202,9 @@ namespace ns
             // back to SH during model initialization
             float rr = mcr->colors[3 * i], g = mcr->colors[3 * i + 1], b = mcr->colors[3 * i + 2];
             const float C0 = 0.2820947f;
-            r->colors[i] = {static_cast<unsigned char>(((rr * C0) + 0.5) * 254),
-                            static_cast<unsigned char>(((g * C0) + 0.5) * 254),
-                            static_cast<unsigned char>(((b * C0) + 0.5) * 254)};
+            r->hdrcolors[i] = {(rr * C0) + 0.5f,
+                            (g * C0) + 0.5f,
+                            (b * C0) + 0.5f};
         }
 
         memcpy(r->points.data(), mcr->means.data(), 3 * nrgauss * sizeof(float));
@@ -274,7 +274,11 @@ namespace ns
             ret.points.mesh = std::move(meshctr);
 
         ret.points.xyz = (points - ret.translation) * ret.scale;
-        ret.points.rgb = pSet->colorsTensor().clone();
+        
+        if (hasMeshInput) {
+            ret.points.hdr_rad = torch::from_blob(pSet->hdrcolors.data(), { static_cast<long int>(pSet->hdrcolors.size()), 3 }, torch::kFloat32).clone();
+        }
+        else ret.points.rgb = pSet->colorsTensor().clone();
 
         RELEASE_POINTSET(pSet);
 
